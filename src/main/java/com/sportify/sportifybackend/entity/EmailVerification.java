@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 
 import java.time.Instant;
+import java.time.Duration;
 
 @Entity
 @Table(name = "email_verifications")
@@ -29,6 +30,15 @@ public class EmailVerification {
 
     @Column(name = "failed_attempts", nullable = false)
     private int failedAttempts;
+    private static final Duration RESEND_INTERVAL = Duration.ofSeconds(60);
+    private static final Duration RESEND_WINDOW = Duration.ofHours(1);
+    private static final int MAX_RESENDS_PER_WINDOW = 3;
+
+    @Column(name = "resend_window_start")
+    private Instant resendWindowStart;
+
+    @Column(name = "resend_count", nullable = false, columnDefinition = "integer default 0")
+    private int resendCount;
 
     protected EmailVerification() {
     }
@@ -51,5 +61,33 @@ public class EmailVerification {
 
     public void recordFailedAttempt() {
         this.failedAttempts++;
+    }
+    public Duration delayBeforeResend(Instant now) {
+        Instant nextAllowedAt = sentAt.plus(RESEND_INTERVAL);
+
+        if (resendWindowStart != null && resendCount >= MAX_RESENDS_PER_WINDOW) {
+            Instant windowEnd = resendWindowStart.plus(RESEND_WINDOW);
+
+            if (windowEnd.isAfter(nextAllowedAt)) {
+                nextAllowedAt = windowEnd;
+            }
+        }
+
+        if (now.isBefore(nextAllowedAt)) {
+            return Duration.between(now, nextAllowedAt);
+        }
+
+        return Duration.ZERO;
+    }
+
+    public void recordResend(String newDigest, Instant now) {
+        if (resendWindowStart == null
+                || !now.isBefore(resendWindowStart.plus(RESEND_WINDOW))) {
+            resendWindowStart = now;
+            resendCount = 0;
+        }
+
+        resendCount++;
+        replaceCode(newDigest, now, now.plus(Duration.ofMinutes(10)));
     }
 }

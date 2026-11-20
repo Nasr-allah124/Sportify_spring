@@ -11,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.time.Duration;
 
 import com.sportify.sportifybackend.dto.request.VerifyEmailRequest;
 import org.springframework.web.server.ResponseStatusException;
@@ -79,42 +80,92 @@ public class AuthService {
                 issuedAt.plus(10, ChronoUnit.MINUTES)
         ));
 
-        events.publishEvent(new VerificationCodeIssued(email, code));
+        events.publishEvent(new VerificationCodeIssued(user.getId(), email, code));
 
         return new RegisterResponse(user.getId(), true);
     }
+    public enum VerificationResult {
+        VERIFIED,
+        CODE_INCORRECT,
+        CODE_EXPIRED,
+        CODE_BLOCKED,
+        NO_PENDING_VERIFICATION
+    }
+
     @Transactional
-    public boolean verifyEmail(VerifyEmailRequest request) {
+    public VerificationResult verifyEmail(VerifyEmailRequest request) {
         EmailVerification verification = verificationRepository
                 .findForVerification(request.userId())
                 .orElse(null);
 
-        if (verification == null
-                || !Instant.now().isBefore(verification.getExpiresAt())
-                || verification.getFailedAttempts() >= 5) {
-            return false;
+        if (verification == null) {
+            return VerificationResult.NO_PENDING_VERIFICATION;
         }
 
-        String expectedDigest = verification.getCodeDigest();
+        if (!Instant.now().isBefore(verification.getExpiresAt())) {
+            return VerificationResult.CODE_EXPIRED;
+        }
+
+        if (verification.getFailedAttempts() >= 5) {
+            return VerificationResult.CODE_BLOCKED;
+        }
+
         String receivedDigest = verificationCode.digest(
                 request.userId(), request.code()
         );
 
         boolean matches = MessageDigest.isEqual(
-                expectedDigest.getBytes(StandardCharsets.US_ASCII),
+                verification.getCodeDigest().getBytes(StandardCharsets.US_ASCII),
                 receivedDigest.getBytes(StandardCharsets.US_ASCII)
         );
 
         if (!matches) {
             verification.recordFailedAttempt();
-            return false;
+
+            if (verification.getFailedAttempts() >= 5) {
+                return VerificationResult.CODE_BLOCKED;
+            }
+
+            return VerificationResult.CODE_INCORRECT;
         }
 
         verification.getUser().markEmailVerified();
         verificationRepository.delete(verification);
-        return true;
+        return VerificationResult.VERIFIED;
+    }
+    @Transactional
+    public Duration resendCode(Long userId) {
+        EmailVerification verification = verificationRepository
+                .findForVerification(userId)
+                .orElse(null);
+
+        if (verification == null || verification.getUser().isEmailVerified()) {
+            return Duration.ZERO;
+        }
+
+        Instant now = Instant.now();
+        Duration delay = verification.delayBeforeResend(now);
+
+        if (!delay.isZero()) {
+            return delay;
+        }
+
+        String code;
+        String digest;
+
+        do {
+            code = verificationCode.generate();
+            digest = verificationCode.digest(userId, code);
+        } while (digest.equals(verification.getCodeDigest()));
+
+        verification.recordResend(digest, now);
+
+        String email = verification.getUser().getEmail();
+        events.publishEvent(new VerificationCodeIssued(userId, email, code));;
+
+        return Duration.ZERO;
     }
 
 
-    public record VerificationCodeIssued(String email, String code) {}
+    public record VerificationCodeIssued(Long userId, String email, String code) {}
 }

@@ -8,6 +8,12 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
+import com.sportify.sportifybackend.dto.request.ResendCodeRequest;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseEntity;
+import java.util.Map;
+
+import java.time.Duration;
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -25,13 +31,34 @@ public class AuthController {
         return authService.register(request);
     }
     @PostMapping("/verify-email")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void verifyEmail(@Valid @RequestBody VerifyEmailRequest request) {
-        if (!authService.verifyEmail(request)) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "Code invalide, expiré ou nombre d’essais dépassé."
-            );
+    public ResponseEntity<?> verifyEmail(
+            @Valid @RequestBody VerifyEmailRequest request
+    ) {
+        AuthService.VerificationResult result = authService.verifyEmail(request);
+
+        if (result == AuthService.VerificationResult.VERIFIED) {
+            return ResponseEntity.noContent().build();
         }
+
+        return ResponseEntity.badRequest().body(Map.of("code", result.name()));
+    }
+    @PostMapping("/resend-code")
+    public ResponseEntity<Void> resendCode(
+            @Valid @RequestBody ResendCodeRequest request
+    ) {
+        Duration delay = authService.resendCode(request.userId());
+
+        if (delay.isZero()) {
+            return ResponseEntity.noContent().build();
+        }
+
+        long seconds = delay.toSeconds();
+        if (delay.getNano() > 0) {
+            seconds++;
+        }
+
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .header(HttpHeaders.RETRY_AFTER, Long.toString(seconds))
+                .build();
     }
 }

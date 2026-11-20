@@ -40,6 +40,34 @@ public class User {
     public Long getId() {
         return id;
     }
+    public String getEmail() {
+        return email;
+    }
+    public String getFirstName() {
+        return firstName;
+    }
+
+    public String getLastName() {
+        return lastName;
+    }
+
+    public String getPasswordHash() {
+        return passwordHash;
+    }
+
+    public Role getRole() {
+        return role;
+    }
+
+    public boolean isEnabled() {
+        return enabled;
+    }
+    @Column(name = "google_subject", unique = true, length = 255)
+    private String googleSubject;
+
+    public void linkGoogleIdentity(String subject) {
+        this.googleSubject = subject;
+    }
 
     public boolean isEmailVerified() {
         return emailVerified;

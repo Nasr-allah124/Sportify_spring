@@ -1,0 +1,148 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+@font-face {
+  font-family: "Inter";
+  src: url("/fonts/inter-latin.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Bricolage Grotesque";
+  src: url("/fonts/bricolage-latin.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+}
+
+:root {
+  color-scheme: light;
+  --page: #f7f8f2;
+  --surface: #ffffff;
+  --surface-soft: #edf1e7;
+  --ink: #172c22;
+  --muted: #58685e;
+  --line: #dce2d5;
+  --accent: #284f35;
+  --accent-hover: #1b3d28;
+  --on-accent: #ffffff;
+  --lime: #c6ef70;
+  --error: #a32d39;
+  --error-soft: #fff0f1;
+}
+
+:root.dark {
+  color-scheme: dark;
+  --page: #101c17;
+  --surface: #18281f;
+  --surface-soft: #203328;
+  --ink: #f0f3e9;
+  --muted: #b4c2b7;
+  --line: #33483a;
+  --accent: #c6ef70;
+  --accent-hover: #d7fa96;
+  --on-accent: #182c20;
+  --error: #ffb4bd;
+  --error-soft: #44272e;
+}
+
+@theme inline {
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-display: "Bricolage Grotesque", system-ui, sans-serif;
+  --color-page: var(--page);
+  --color-surface: var(--surface);
+  --color-soft: var(--surface-soft);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-on-accent: var(--on-accent);
+  --color-lime: var(--lime);
+  --color-error: var(--error);
+  --color-error-soft: var(--error-soft);
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 6.5rem;
+}
+
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+button, a, input, summary {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:not(:disabled), summary {
+  cursor: pointer;
+}
+
+a, button, input {
+  transition: color 180ms, background-color 180ms, border-color 180ms;
+}
+
+:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 5px;
+}
+
+::selection {
+  background: #c6ef70;
+  color: #172c22;
+}
+
+@layer components {
+  .page-container {
+    @apply mx-auto w-full max-w-7xl px-5 sm:px-8 lg:px-12;
+  }
+
+  .button-primary {
+    @apply inline-flex min-h-12 items-center justify-center gap-3 rounded-full
+    bg-accent px-6 py-3 text-sm font-semibold text-on-accent
+    hover:bg-accent-hover disabled:cursor-wait disabled:opacity-60;
+  }
+
+  .button-secondary {
+    @apply inline-flex min-h-12 items-center justify-center gap-3 rounded-full
+    border border-line px-6 py-3 text-sm font-semibold text-ink hover:bg-soft;
+  }
+
+  .eyebrow {
+    @apply text-xs font-semibold tracking-[0.14em] text-accent uppercase;
+  }
+
+  .section-title {
+    @apply font-display text-4xl leading-[1.08] font-semibold tracking-tight sm:text-5xl;
+  }
+
+  .field-label {
+    @apply mb-2 block text-sm font-medium text-ink;
+  }
+
+  .field-input {
+    @apply min-h-12 w-full min-w-0 rounded-xl border border-line
+    bg-page px-4 py-3 text-base text-ink placeholder:text-muted
+    disabled:opacity-60;
+  }
+
+  .field-error {
+    @apply mt-2 block text-xs text-error;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

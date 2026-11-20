@@ -1,0 +1,121 @@
+<section class="page-container grid min-h-[calc(100dvh-13rem)] gap-10 py-12 lg:grid-cols-2 lg:items-center lg:gap-20 lg:py-16">
+  <div class="hidden lg:block">
+    <p class="eyebrow mb-6">Le jeu commence avec vous</p>
+    <h1 class="section-title max-w-lg">Le bon terrain.<br>Au bon moment.<br>Avec votre équipe.</h1>
+    <img src="/images/sportify-pitch.webp" alt="Terrain de football au soleil couchant"
+         width="1536" height="1024"
+         class="mt-8 aspect-[1.6] w-full rounded-3xl object-cover">
+  </div>
+
+  <div class="w-full max-w-lg justify-self-center rounded-3xl border border-line bg-surface p-6 sm:p-9">
+    @if (verified()) {
+      <span class="mb-6 flex size-12 items-center justify-center rounded-full bg-soft text-2xl text-accent" aria-hidden="true">✓</span>
+      <h2 class="font-display text-3xl font-semibold tracking-tight" role="status">Votre adresse est vérifiée.</h2>
+      <p class="mt-4 text-sm leading-7 text-muted">Votre compte Sportify est prêt.</p>
+      <a routerLink="/login" class="button-primary mt-7">Se connecter</a>
+    } @else if (userId() === null) {
+      <p class="eyebrow mb-3">Bienvenue sur Sportify</p>
+      <h2 class="font-display text-3xl font-semibold tracking-tight">Créer mon compte</h2>
+      <p class="mt-3 mb-7 text-sm leading-6 text-muted">Votre prochaine partie commence ici.</p>
+
+      <form [formGroup]="registrationForm" (ngSubmit)="register()" novalidate>
+        <fieldset [disabled]="loading() || resending()" class="min-w-0">
+          <div class="grid gap-5 sm:grid-cols-2">
+            <div>
+              <label for="firstName" class="field-label">Prénom</label>
+              <input id="firstName" class="field-input" formControlName="firstName"
+                     autocomplete="given-name" maxlength="100"
+                     [attr.aria-invalid]="registrationForm.controls.firstName.touched && registrationForm.controls.firstName.invalid"
+                     aria-describedby="first-name-error">
+              @if (registrationForm.controls.firstName.touched && registrationForm.controls.firstName.invalid) {
+                <small id="first-name-error" class="field-error">Renseignez votre prénom.</small>
+              }
+            </div>
+            <div>
+              <label for="lastName" class="field-label">Nom</label>
+              <input id="lastName" class="field-input" formControlName="lastName"
+                     autocomplete="family-name" maxlength="100"
+                     [attr.aria-invalid]="registrationForm.controls.lastName.touched && registrationForm.controls.lastName.invalid"
+                     aria-describedby="last-name-error">
+              @if (registrationForm.controls.lastName.touched && registrationForm.controls.lastName.invalid) {
+                <small id="last-name-error" class="field-error">Renseignez votre nom.</small>
+              }
+            </div>
+          </div>
+          <div class="mt-5">
+            <label for="email" class="field-label">Adresse email</label>
+            <input id="email" class="field-input" type="email" formControlName="email"
+                   autocomplete="email" maxlength="254" placeholder="vous@exemple.com"
+                   [attr.aria-invalid]="registrationForm.controls.email.touched && registrationForm.controls.email.invalid"
+                   aria-describedby="email-error">
+            @if (registrationForm.controls.email.touched && registrationForm.controls.email.invalid) {
+              <small id="email-error" class="field-error">Saisissez une adresse email valide.</small>
+            }
+          </div>
+          <div class="mt-5">
+            <label for="password" class="field-label">Mot de passe</label>
+            <input id="password" class="field-input" type="password" formControlName="password"
+                   autocomplete="new-password" aria-describedby="password-help password-error"
+                   [attr.aria-invalid]="registrationForm.controls.password.touched && registrationForm.controls.password.invalid">
+            <small id="password-help" class="mt-2 block text-xs text-muted">Au moins 8 caractères.</small>
+            @if (registrationForm.controls.password.touched && registrationForm.controls.password.invalid) {
+              <small id="password-error" class="field-error">Choisissez au moins 8 caractères avec du texte.</small>
+            }
+          </div>
+          <button type="submit" [disabled]="loading()" class="button-primary mt-7 w-full">
+            {{ loading() ? 'Création en cours…' : 'Créer mon compte' }}
+          </button>
+        </fieldset>
+      </form>
+      <app-google-auth-button
+        [busy]="loading()"
+        (busyChange)="loading.set($event)"
+      />
+      <p class="mt-6 text-center text-xs text-muted">Déjà inscrit ?
+        <a routerLink="/login" class="font-semibold text-accent underline underline-offset-4">Se connecter</a>
+      </p>
+    } @else {
+      <p class="eyebrow mb-3">Une dernière étape</p>
+      <h2 class="font-display text-3xl font-semibold tracking-tight">Vérifiez votre adresse</h2>
+      <p class="mt-4 mb-7 text-sm leading-7 text-muted">
+        Saisissez les six chiffres reçus par email. Le code est valable 10 minutes.
+        Pensez à vérifier votre dossier de courriers indésirables.
+      </p>
+      <form [formGroup]="verificationForm" (ngSubmit)="verifyEmail()" novalidate>
+        <label for="code" class="field-label">Code de vérification</label>
+        <input id="code" class="field-input text-center text-2xl tracking-[0.45em]"
+               formControlName="code" type="text" inputmode="numeric"
+               autocomplete="one-time-code" maxlength="6" placeholder="000000"
+               [readOnly]="loading()"
+               [attr.aria-invalid]="verificationForm.controls.code.touched && verificationForm.controls.code.invalid"
+               aria-describedby="code-error">
+        @if (verificationForm.controls.code.touched && verificationForm.controls.code.invalid) {
+          <small id="code-error" class="field-error">Saisissez exactement six chiffres.</small>
+        }
+        <button type="submit" [disabled]="loading()" class="button-primary mt-6 w-full">
+          {{ loading() ? 'Vérification en cours…' : 'Vérifier mon adresse' }}
+        </button>
+      </form>
+
+      <button
+        type="button"
+        (click)="resendCode()"
+        [disabled]="loading() || resending()"
+        class="mt-5 font-semibold text-accent underline underline-offset-4 disabled:opacity-50"
+      >
+        {{ resending() ? 'Demande en cours…' : 'Renvoyer le code' }}
+      </button>
+
+
+      @if (resendMessage()) {
+        <p role="status" class="mt-3 text-sm text-muted">
+          {{ resendMessage() }}
+        </p>
+      }
+    }
+
+    @if (errorMessage()) {
+      <p role="alert" class="mt-5 rounded-xl bg-error-soft p-4 text-sm leading-6 text-error">{{ errorMessage() }}</p>
+    }
+  </div>
+</section>

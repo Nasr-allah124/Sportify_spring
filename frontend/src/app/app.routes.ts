@@ -27,5 +27,19 @@ export const routes: Routes = [
   },
   { path: 'inscription', redirectTo: 'register', pathMatch: 'full' },
   { path: 'connexion', redirectTo: 'login', pathMatch: 'full' },
+  {
+    path: 'parametres',
+    title: 'Paramètres | Sportify',
+    canActivate: [requireLogin],
+    loadComponent: () =>
+      import('./features/settings/settings').then(m => m.Settings)
+  },
+  {
+    path: 'profil/modifier',
+    title: 'Modifier mon profil | Sportify',
+    canActivate: [requireLogin],
+    loadComponent: () =>
+      import('./features/profile/edit-profile').then(m => m.EditProfile)
+  },
   { path: '**', redirectTo: '' }
 ];

@@ -19,6 +19,8 @@ import jakarta.validation.constraints.NotBlank;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.oauth2.jwt.BadJwtException;
 import org.springframework.security.oauth2.jwt.JwtException;
+import com.sportify.sportifybackend.dto.request.UpdateProfileRequest;
+import org.springframework.transaction.annotation.Transactional;
 
 @RestController
 @RequestMapping("/api/v1")
@@ -74,6 +76,27 @@ public class LoginController {
                 .cacheControl(CacheControl.noStore())
                 .body(ProfileResponse.from(user));
     }
+    @PatchMapping("/users/me")
+    @Transactional
+    public ResponseEntity<ProfileResponse> updateMe(
+            @AuthenticationPrincipal Jwt jwt,
+            @Valid @RequestBody UpdateProfileRequest request
+    ) {
+        Long userId = Long.valueOf(jwt.getSubject());
+
+        User user = users.findById(userId)
+                .filter(User::isEnabled)
+                .filter(User::isEmailVerified)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
+
+        user.updateProfile(request.firstName(), request.lastName(), request.phone());
+
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.noStore())
+                .body(ProfileResponse.from(user));
+    }
+
+
     public record GoogleLoginRequest(@NotBlank String credential) {}
 
     @PostMapping("/auth/google")

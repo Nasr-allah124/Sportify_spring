@@ -86,4 +86,19 @@ public class User {
         this.email = email;
         this.passwordHash = passwordHash;
     }
+    public String getPhone() {
+        return phone;
+    }
+
+    public void updateProfile(String firstName, String lastName, String phone) {
+        if (firstName != null) {
+            this.firstName = firstName.strip();
+        }
+        if (lastName != null) {
+            this.lastName = lastName.strip();
+        }
+        if (phone != null) {
+            this.phone = phone.isBlank() ? null : phone.strip();
+        }
+    }
 }

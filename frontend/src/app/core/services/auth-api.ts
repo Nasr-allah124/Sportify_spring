@@ -23,6 +23,7 @@ export interface UserProfile {
   lastName: string;
   email: string;
   role: string;
+  phone?: string | null;
 }
 
 @Injectable({ providedIn: 'root' })

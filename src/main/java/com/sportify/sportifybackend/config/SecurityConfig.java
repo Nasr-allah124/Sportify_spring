@@ -37,6 +37,12 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
                         .requestMatchers(HttpMethod.POST, publicAuthRoutes).permitAll()
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/v1/complexes",
+                                "/api/v1/fields",
+                                "/api/v1/fields/{id}"
+                        ).permitAll()
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(resource -> resource
                         .jwt(jwt -> jwt.jwtAuthenticationConverter(authentication)))

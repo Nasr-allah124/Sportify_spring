@@ -7,7 +7,8 @@ public record ProfileResponse(
         String firstName,
         String lastName,
         String email,
-        String role
+        String role,
+        String phone
 ) {
     public static ProfileResponse from(User user) {
         return new ProfileResponse(
@@ -15,7 +16,8 @@ public record ProfileResponse(
                 user.getFirstName(),
                 user.getLastName(),
                 user.getEmail(),
-                user.getRole().name()
+                user.getRole().name(),
+                user.getPhone()
         );
     }
 }

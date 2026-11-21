@@ -4,10 +4,11 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { AuthApi, UserProfile } from '../../core/services/auth-api';
 import { AuthSession } from '../../core/services/auth-session';
-
+import { RouterLink } from '@angular/router';
 @Component({
   selector: 'app-profile',
   standalone: true,
+  imports: [RouterLink],
   template: `
     <section class="page-container py-12">
       <div class="mx-auto max-w-lg rounded-3xl border border-line bg-surface p-8">
@@ -20,9 +21,17 @@ import { AuthSession } from '../../core/services/auth-session';
               <dd>{{ user.firstName }} {{ user.lastName }}</dd></div>
             <div><dt class="text-sm text-muted">Adresse email</dt>
               <dd>{{ user.email }}</dd></div>
+            <div>
+              <dt class="text-sm text-muted">Téléphone</dt>
+              <dd>{{ user.phone || 'Non renseigné' }}</dd>
+            </div>
+
             <div><dt class="text-sm text-muted">Rôle</dt>
               <dd>{{ user.role }}</dd></div>
           </dl>
+          <a routerLink="/profil/modifier" class="button-primary mt-7">
+            Modifier mon profil
+          </a>
         } @else if (error()) {
           <p role="alert" class="mt-5 text-error">{{ error() }}</p>
           <button type="button" class="button-secondary mt-3" (click)="load()">
@@ -32,9 +41,6 @@ import { AuthSession } from '../../core/services/auth-session';
           <p role="status" class="mt-5 text-muted">Chargement du profil…</p>
         }
 
-        <button type="button" class="button-secondary mt-7" (click)="session.logout()">
-          Se déconnecter
-        </button>
       </div>
     </section>
   `

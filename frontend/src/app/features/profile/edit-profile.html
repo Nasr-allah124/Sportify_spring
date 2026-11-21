@@ -1,0 +1,84 @@
+<main class="page-container py-10">
+  <section class="mx-auto max-w-2xl" aria-labelledby="settings-title">
+    <a routerLink="/profil" class="button-secondary mt-3 sm:ml-3">
+      Annuler
+    </a>
+
+    @if (loading()) {
+      <p role="status" class="text-muted">Chargement du profil…</p>
+    }
+
+    @if (profile(); as current) {
+      <div class="rounded-3xl border border-current/15 p-6 sm:p-8">
+        <h2 class="text-2xl font-semibold">Mon profil</h2>
+        <p class="mt-2 text-sm text-muted">{{ current.email }}</p>
+
+        <form
+          [formGroup]="form"
+          (ngSubmit)="save()"
+          (input)="success.set(''); error.set('')"
+          class="mt-7"
+          novalidate
+        >
+          <fieldset [disabled]="saving()" class="min-w-0">
+            <div class="grid gap-5 sm:grid-cols-2">
+              <div>
+                <label for="firstName" class="block font-medium">Prénom</label>
+                <input
+                  id="firstName" formControlName="firstName" autocomplete="given-name"
+                  required maxlength="100"
+                  class="mt-2 w-full rounded-xl border border-current/25 bg-transparent px-4 py-3"
+                />
+                @if (form.controls.firstName.touched && form.controls.firstName.invalid) {
+                  <p class="mt-1 text-sm text-error">Renseignez votre prénom.</p>
+                }
+              </div>
+
+              <div>
+                <label for="lastName" class="block font-medium">Nom</label>
+                <input
+                  id="lastName" formControlName="lastName" autocomplete="family-name"
+                  required maxlength="100"
+                  class="mt-2 w-full rounded-xl border border-current/25 bg-transparent px-4 py-3"
+                />
+                @if (form.controls.lastName.touched && form.controls.lastName.invalid) {
+                  <p class="mt-1 text-sm text-error">Renseignez votre nom.</p>
+                }
+              </div>
+            </div>
+
+            <label for="phone" class="mt-5 block font-medium">
+              Téléphone <span class="text-sm text-muted">(facultatif)</span>
+            </label>
+            <input
+              id="phone" formControlName="phone" type="tel" autocomplete="tel"
+              maxlength="30" placeholder="+212…"
+              class="mt-2 w-full rounded-xl border border-current/25 bg-transparent px-4 py-3"
+            />
+
+            <button
+              type="submit"
+              [disabled]="saving() || form.pristine"
+              class="button-primary mt-7 w-full disabled:opacity-60 sm:w-auto"
+            >
+              {{ saving() ? 'Enregistrement…' : 'Enregistrer les modifications' }}
+            </button>
+          </fieldset>
+        </form>
+      </div>
+    }
+
+    @if (error()) {
+      <p role="alert" class="mt-4 text-error">{{ error() }}</p>
+      @if (!profile() && !loading()) {
+        <button type="button" class="button-secondary mt-3" (click)="loadProfile()">
+          Réessayer
+        </button>
+      }
+    }
+
+    @if (success()) {
+      <p role="status" class="mt-4 font-medium">{{ success() }}</p>
+    }
+  </section>
+</main>

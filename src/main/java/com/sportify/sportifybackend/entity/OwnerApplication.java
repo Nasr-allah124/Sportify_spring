@@ -53,11 +53,36 @@ public class OwnerApplication {
 
     @Column(name = "rejection_reason", length = 1000)
     private String rejectionReason;
+    @Column(name = "latitude")
+    private Double latitude;
+
+    @Column(name = "longitude")
+    private Double longitude;
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_complex_id", unique = true)
     private SportComplex createdComplex;
 
     protected OwnerApplication() {
+    }public OwnerApplication(
+            User applicant,
+            String complexName,
+            String city,
+            String address,
+            String phone,
+            String description,
+            Double latitude,
+            Double longitude
+    ) {
+        this.applicant = applicant;
+        this.complexName = complexName.strip();
+        this.city = city.strip();
+        this.address = address.strip();
+        this.phone = phone.strip();
+        this.description = description == null || description.isBlank()
+                ? null
+                : description.strip();
+        this.latitude = latitude;
+        this.longitude = longitude;
     }
 }

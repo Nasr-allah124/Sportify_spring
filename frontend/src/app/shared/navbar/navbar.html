@@ -31,6 +31,19 @@
     <div class="flex items-center gap-3">
       <app-theme-toggle />
       @if (session.signedIn()) {
+        <button
+          type="button"
+          (click)="session.logout()"
+          class="hidden px-2 text-sm font-semibold text-muted hover:text-ink sm:block"
+        >
+          Se déconnecter
+        </button>
+
+        <a routerLink="/parametres"
+           class="hidden px-2 text-sm font-semibold text-muted hover:text-ink lg:inline-flex">
+          Paramètres
+        </a>
+
         <a routerLink="/profil" class="button-primary hidden sm:inline-flex">
           Mon profil
         </a>
@@ -38,6 +51,7 @@
         <a routerLink="/login" class="hidden px-2 text-sm font-semibold sm:block">
           Se connecter
         </a>
+
         <a routerLink="/register" class="button-primary hidden md:inline-flex">
           Créer mon compte
         </a>
@@ -63,6 +77,16 @@
       @if (session.signedIn()) {
       <a routerLink="/profil" (click)="menuOpen.set(false)"
          class="button-primary mt-3">Mon profil</a>
+        <a routerLink="/parametres" class="text-sm font-semibold hover:underline">
+          Paramètres
+        </a>
+        <button
+          type="button"
+          (click)="menuOpen.set(false); session.logout()"
+          class="rounded-lg px-3 py-3 text-left text-sm font-semibold hover:bg-soft sm:hidden"
+        >
+          Se déconnecter
+        </button>
     } @else {
       <div class="mt-3 grid grid-cols-2 gap-3">
         <a routerLink="/login" class="button-secondary">Se connecter</a>

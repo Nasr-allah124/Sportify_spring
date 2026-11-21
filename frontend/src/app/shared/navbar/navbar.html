@@ -1,36 +1,54 @@
-<header class="sticky top-0 z-40 border-b border-line bg-page/95 backdrop-blur-xl"
-        (keydown.escape)="menuOpen.set(false)">
-  <nav class="page-container flex h-21 items-center justify-between gap-5"
-       aria-label="Navigation principale"><a routerLink="/"
-                                             aria-label="Sportify, accueil"
-                                             class="relative inline-flex shrink-0 items-center">
-
-    <img
-      src="/images/sportify-logo.png"
-      alt=""
-      class="block h-10 w-auto sm:h-12"
+<header
+  class="sticky top-0 z-40 border-b border-line bg-page/95 backdrop-blur-xl"
+  (keydown.escape)="menuOpen.set(false)"
+>
+  <nav
+    class="page-container flex h-21 items-center justify-between gap-5"
+    aria-label="Navigation principale"
+  >
+    <a
+      routerLink="/"
+      aria-label="Sportify, accueil"
+      class="relative inline-flex shrink-0 items-center"
     >
+      <img src="/images/sportify-logo.png" alt="" class="block h-10 w-auto sm:h-12" />
 
-    <img
-      src="/images/sportify-logo.png"
-      alt=""
-      aria-hidden="true"
-      class="pointer-events-none absolute inset-0 hidden h-full w-full
-           brightness-0 invert dark:block"
-      style="clip-path: inset(0 0 0 28%);"
-    >
-  </a>
+      <img
+        src="/images/sportify-logo.png"
+        alt=""
+        aria-hidden="true"
+        class="pointer-events-none absolute inset-0 hidden h-full w-full brightness-0 invert dark:block"
+        style="clip-path: inset(0 0 0 28%)"
+      />
+    </a>
 
     <div class="hidden items-center gap-7 lg:flex">
       @for (link of links; track link.fragment) {
-        <a routerLink="/" [fragment]="link.fragment"
-           class="text-[13px] font-medium text-muted hover:text-ink">{{ link.text }}</a>
+        <a
+          routerLink="/"
+          [fragment]="link.fragment"
+          class="text-[13px] font-medium text-muted hover:text-ink"
+          >{{ link.text }}</a
+        >
       }
     </div>
 
     <div class="flex items-center gap-3">
       <app-theme-toggle />
       @if (session.signedIn()) {
+         <a
+          routerLink="/mes-reservations"
+          class="hidden px-2 text-sm font-semibold text-muted hover:text-ink lg:inline-flex"
+        >
+          Mes réservations
+        </a>
+     
+         <a
+          routerLink="/parametres"
+          class="hidden px-2 text-sm font-semibold text-muted hover:text-ink lg:inline-flex"
+        >
+          Paramètres
+        </a>
         <button
           type="button"
           (click)="session.logout()"
@@ -39,47 +57,60 @@
           Se déconnecter
         </button>
 
-        <a routerLink="/parametres"
-           class="hidden px-2 text-sm font-semibold text-muted hover:text-ink lg:inline-flex">
-          Paramètres
-        </a>
-
-        <a routerLink="/profil" class="button-primary hidden sm:inline-flex">
-          Mon profil
-        </a>
+        <a routerLink="/profil" class="button-primary hidden sm:inline-flex"> Mon profil </a>
       } @else {
-        <a routerLink="/login" class="hidden px-2 text-sm font-semibold sm:block">
-          Se connecter
-        </a>
+        <a routerLink="/login" class="hidden px-2 text-sm font-semibold sm:block"> Se connecter </a>
 
         <a routerLink="/register" class="button-primary hidden md:inline-flex">
           Créer mon compte
         </a>
       }
-      <button type="button" class="flex size-11 items-center justify-center rounded-full
-                                  border border-line text-xl lg:hidden"
-              aria-controls="mobile-navigation" [attr.aria-expanded]="menuOpen()"
-              [attr.aria-label]="menuOpen() ? 'Fermer le menu' : 'Ouvrir le menu'"
-              (click)="toggleMenu()">
+      <button
+        type="button"
+        class="flex size-11 items-center justify-center rounded-full border border-line text-xl lg:hidden"
+        aria-controls="mobile-navigation"
+        [attr.aria-expanded]="menuOpen()"
+        [attr.aria-label]="menuOpen() ? 'Fermer le menu' : 'Ouvrir le menu'"
+        (click)="toggleMenu()"
+      >
         <span aria-hidden="true">{{ menuOpen() ? '×' : '☰' }}</span>
       </button>
     </div>
   </nav>
 
   @if (menuOpen()) {
-    <div id="mobile-navigation" class="page-container grid gap-1 border-t border-line py-4 lg:hidden">
+    <div
+      id="mobile-navigation"
+      class="page-container grid gap-1 border-t border-line py-4 lg:hidden"
+    >
       @for (link of links; track link.fragment) {
-        <a routerLink="/" [fragment]="link.fragment" (click)="menuOpen.set(false)"
-           class="rounded-lg px-3 py-3 text-sm hover:bg-soft">{{ link.text }}</a>
+        <a
+          routerLink="/"
+          [fragment]="link.fragment"
+          (click)="menuOpen.set(false)"
+          class="rounded-lg px-3 py-3 text-sm hover:bg-soft"
+          >{{ link.text }}</a
+        >
       }
-      <a routerLink="/" fragment="faq" (click)="menuOpen.set(false)"
-         class="rounded-lg px-3 py-3 text-sm hover:bg-soft">Questions fréquentes</a>
+      <a
+        routerLink="/"
+        fragment="faq"
+        (click)="menuOpen.set(false)"
+        class="rounded-lg px-3 py-3 text-sm hover:bg-soft"
+        >Questions fréquentes</a
+      >
       @if (session.signedIn()) {
-      <a routerLink="/profil" (click)="menuOpen.set(false)"
-         class="button-primary mt-3">Mon profil</a>
-        <a routerLink="/parametres" class="text-sm font-semibold hover:underline">
-          Paramètres
+        <a routerLink="/profil" (click)="menuOpen.set(false)" class="button-primary mt-3"
+          >Mon profil</a
+        >
+        <a
+          routerLink="/mes-reservations"
+          (click)="menuOpen.set(false)"
+          class="rounded-lg px-3 py-3 text-sm font-semibold hover:bg-soft"
+        >
+          Mes réservations
         </a>
+        <a routerLink="/parametres" class="text-sm font-semibold hover:underline"> Paramètres </a>
         <button
           type="button"
           (click)="menuOpen.set(false); session.logout()"
@@ -87,12 +118,13 @@
         >
           Se déconnecter
         </button>
-    } @else {
-      <div class="mt-3 grid grid-cols-2 gap-3">
-        <a routerLink="/login" class="button-secondary">Se connecter</a>
-        <a routerLink="/register" class="button-primary">S’inscrire</a>
-      </div>
-    }
+       
+      } @else {
+        <div class="mt-3 grid grid-cols-2 gap-3">
+          <a routerLink="/login" class="button-secondary">Se connecter</a>
+          <a routerLink="/register" class="button-primary">S’inscrire</a>
+        </div>
+      }
     </div>
   }
 </header>

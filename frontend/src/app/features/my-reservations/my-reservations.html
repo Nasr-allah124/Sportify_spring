@@ -1,0 +1,80 @@
+<section class="page-container py-16">
+  <p class="eyebrow mb-3">Votre espace</p>
+
+  <h1 class="section-title">Mes réservations</h1>
+
+  <p class="mt-4 text-sm text-muted">Retrouvez ici vos réservations passées et à venir.</p>
+  @if (cancelMessage()) {
+    <p class="mt-6" role="status">
+      {{ cancelMessage() }}
+    </p>
+  }
+
+  @if (loading()) {
+    <p class="mt-8" role="status">Chargement de vos réservations...</p>
+  } @else if (error()) {
+    <div class="mt-8" role="alert">
+      <p>{{ error() }}</p>
+
+      <button type="button" class="button-secondary mt-4" (click)="loadReservations()">
+        Réessayer
+      </button>
+    </div>
+  } @else if (reservations().length === 0) {
+    <div class="mt-8 rounded-2xl border border-line bg-surface p-6">
+      <p>Vous n’avez pas encore de réservation.</p>
+
+      <a routerLink="/" fragment="terrains" class="button-primary mt-5 inline-flex">
+        Découvrir les terrains
+      </a>
+    </div>
+  } @else {
+    <div class="mt-8 grid gap-4 md:grid-cols-2">
+      @for (reservation of reservations(); track reservation.id) {
+        <article class="rounded-2xl border border-line bg-surface p-6">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <p class="text-sm text-muted">Référence #{{ reservation.id }}</p>
+
+            @if (reservation.status === 'CONFIRMED') {
+              <span class="rounded-full bg-soft px-3 py-1 text-sm text-accent"> Confirmée </span>
+            } @else {
+              <span class="rounded-full border border-line px-3 py-1 text-sm"> Annulée </span>
+            }
+          </div>
+
+          <h2 class="mt-4 font-display text-2xl font-semibold">
+            {{ reservation.fieldName }}
+          </h2>
+
+          <p class="mt-2">{{ reservation.complexName }} · {{ reservation.city }}</p>
+
+          <p class="mt-5 font-semibold">
+            {{ formatDate(reservation.startAt) }}
+          </p>
+
+          <p class="mt-1 text-sm text-muted">
+            {{ formatTime(reservation.startAt) }}
+            –
+            {{ formatTime(reservation.endAt) }}
+          </p>
+
+          <p class="mt-4 font-semibold">{{ reservation.totalPrice }} MAD</p>
+          @if (canCancel(reservation)) {
+            <button
+              type="button"
+              class="button-secondary mt-5"
+              [disabled]="cancellingId() !== null"
+              (click)="cancelReservation(reservation)"
+            >
+              @if (cancellingId() === reservation.id) {
+                Annulation...
+              } @else {
+                Annuler la réservation
+              }
+            </button>
+          }
+        </article>
+      }
+    </div>
+  }
+</section>

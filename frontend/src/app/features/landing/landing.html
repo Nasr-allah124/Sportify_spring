@@ -35,7 +35,110 @@
     </figcaption>
   </figure>
 </section>
+@if (session.signedIn()) {
+<section id="terrains" class="page-container py-16">
+  <div class="mb-8">
+    <p class="eyebrow mb-3">Trouvez votre terrain</p>
+    <h2 class="section-title">Les terrains proposés</h2>
+    <p class="mt-3 text-sm text-muted">
+      Recherchez un terrain par ville et par sport.
+    </p>
+  </div>
 
+  <form
+    class="mb-8 flex flex-wrap items-end gap-4"
+    (ngSubmit)="loadFields()"
+  >
+    <label class="flex flex-col gap-2">
+      <span>Ville</span>
+      <input
+        class="rounded-xl border border-line bg-page px-4 py-3"
+        type="text"
+        name="city"
+        [(ngModel)]="city"
+        (ngModelChange)="scheduleSearch()"
+        placeholder="Exemple : Fès"
+      >
+    </label>
+
+    <label class="flex flex-col gap-2">
+      <span>Sport</span>
+      <select
+        class="rounded-xl border border-line bg-page px-4 py-3"
+        name="sport"
+        [(ngModel)]="sport"
+        (ngModelChange)="scheduleSearch()"
+      >
+        <option value="">Tous les sports</option>
+        <option value="FOOTBALL">Football</option>
+        <option value="PADEL">Padel</option>
+        <option value="TENNIS">Tennis</option>
+        <option value="BASKETBALL">Basketball</option>
+      </select>
+    </label>
+
+    <button type="submit" class="button-primary">
+      Rechercher
+    </button>
+
+    <button type="button" class="button-secondary" (click)="resetFilters()">
+      Réinitialiser
+    </button>
+  </form>
+
+  @if (loading()) {
+  <p role="status">Chargement des terrains...</p>
+
+} @else if (error()) {
+  <div role="alert">
+    <p>{{ error() }}</p>
+
+    <button
+      type="button"
+      class="button-secondary mt-4"
+      (click)="loadFields()"
+    >
+      Réessayer
+    </button>
+  </div>
+
+} @else if (fields().length === 0) {
+  <p role="status">
+    Aucun terrain ne correspond à votre recherche.
+    Essayez une autre ville ou un autre sport.
+  </p>
+
+} @else {
+  <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    @for (field of fields(); track field.id) {
+      <article class="rounded-2xl border border-line bg-surface p-6">
+        <p class="text-sm text-accent">
+          {{ field.sportType }}
+        </p>
+
+        <h3 class="mt-2 font-display text-2xl font-semibold">
+          {{ field.name }}
+        </h3>
+
+        <p class="mt-3">{{ field.complex.name }}</p>
+        <p class="text-sm text-muted">{{ field.complex.city }}</p>
+
+        <p class="mt-5 font-semibold">
+          {{ field.hourlyPrice }} MAD / heure
+        </p>
+
+        <a
+          class="button-secondary mt-5 inline-flex"
+          [routerLink]="['/terrains', field.id]"
+        >
+          Voir le terrain
+        </a>
+      </article>
+    }
+  </div>
+}
+</section>
+}
 <section id="sports" class="border-y border-line bg-surface">
   <div class="page-container py-12 lg:py-16">
     <div class="mb-8 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">

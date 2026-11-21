@@ -13,6 +13,9 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
 
+import java.text.Normalizer;
+import java.util.Locale;
+
 @Service
 @Transactional(readOnly = true)
 public class CatalogService {
@@ -30,14 +33,41 @@ public class CatalogService {
                 .stream().map(SportComplexResponse::from).toList();
     }
 
-    public List<FieldResponse> listFields(String city, Field.SportType sport) {
-        var sports = sport == null
-                ? EnumSet.allOf(Field.SportType.class)
-                : EnumSet.of(sport);
+   public List<FieldResponse> listFields(String city, Field.SportType sport) {
+    var sports = sport == null
+            ? EnumSet.allOf(Field.SportType.class)
+            : EnumSet.of(sport);
 
-        return fields.findVisibleFields(SportComplex.Status.ACTIVE, city.strip(), sports)
-                .stream().map(FieldResponse::from).toList();
+    String searchedCity = normalizeCity(city);
+
+    return fields.findVisibleFields(
+                    SportComplex.Status.ACTIVE,
+                    "",
+                    sports
+            )
+            .stream()
+            .filter(field ->
+                    searchedCity.isEmpty()
+                            || normalizeCity(field.getComplex().getCity())
+                                    .startsWith(searchedCity)
+            )
+            .map(FieldResponse::from)
+            .toList();
+}
+private String normalizeCity(String city) {
+    if (city == null) {
+        return "";
     }
+
+    String normalized = Normalizer.normalize(
+            city.strip(),
+            Normalizer.Form.NFD
+    );
+
+    return normalized
+            .replaceAll("\\p{M}+", "")
+            .toLowerCase(Locale.ROOT);
+}
 
     public Optional<FieldResponse> findField(Long id) {
         return fields.findByIdAndActiveTrueAndComplex_Status(id, SportComplex.Status.ACTIVE)

@@ -1,5 +1,6 @@
 package com.sportify.sportifybackend.repository;
-
+import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.Lock;
 import com.sportify.sportifybackend.entity.Field;
 import com.sportify.sportifybackend.entity.SportComplex;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -31,4 +32,7 @@ public interface FieldRepository extends JpaRepository<Field, Long> {
     Optional<Field> findByIdAndActiveTrueAndComplex_Status(
             Long id, SportComplex.Status status
     );
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+@Query("select f from Field f where f.id = :id")
+Optional<Field> findByIdForReservation(@Param("id") Long id);
 }

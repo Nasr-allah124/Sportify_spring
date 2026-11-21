@@ -41,5 +41,29 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/profile/edit-profile').then(m => m.EditProfile)
   },
+  {
+  path: 'terrains/:id',
+  title: 'Détail du terrain | Sportify',
+    canActivate: [requireLogin],
+  loadComponent: () =>
+    import('./features/field-detail/field-detail')
+      .then(module => module.FieldDetail)
+},
+{
+  path: 'mes-reservations',
+  title: 'Mes réservations | Sportify',
+  canActivate: [requireLogin],
+  loadComponent: () =>
+    import('./features/my-reservations/my-reservations')
+      .then(module => module.MyReservations)
+},
+{
+  path: 'admin/demandes-proprietaire',
+  title: 'Demandes propriétaire | Sportify',
+  canActivate: [requireLogin],
+  loadComponent: () =>
+    import('./features/admin-owner-applications/admin-owner-applications')
+      .then(module => module.AdminOwnerApplications)
+},
   { path: '**', redirectTo: '' }
 ];

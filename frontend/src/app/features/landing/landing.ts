@@ -1,13 +1,123 @@
-import { Component } from '@angular/core';
+import {
+  Component,
+  DestroyRef,
+  inject,
+  OnInit,
+  signal
+} from '@angular/core';
+
+import { HttpErrorResponse } from '@angular/common/http';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 
+import {
+  finalize,
+  Subscription,
+  timeout,
+  TimeoutError
+} from 'rxjs';
+
+import { CatalogApi, Field } from '../../core/services/catalog-api';
+import { AuthSession } from '../../core/services/auth-session';
 @Component({
   selector: 'app-landing',
   standalone: true,
-  imports: [RouterLink],
+  imports: [RouterLink, FormsModule],
   templateUrl: './landing.html'
 })
-export class Landing {
+export class Landing implements OnInit {
+    private readonly catalogApi = inject(CatalogApi);
+  private readonly destroyRef = inject(DestroyRef);
+
+  readonly session = inject(AuthSession);
+
+  // Les résultats et les états d'affichage sont des signals.
+  readonly fields = signal<Field[]>([]);
+  readonly loading = signal(false);
+  readonly error = signal('');
+
+  city = '';
+  sport = '';
+
+  // On garde la recherche en cours pour pouvoir l'annuler.
+  private searchSubscription?: Subscription;
+private searchTimer?: ReturnType<typeof setTimeout>;
+  ngOnInit(): void {
+    if (this.session.signedIn()) {
+      this.loadFields();
+    }
+  }
+scheduleSearch(): void {
+  // Annule l'attente et la requête précédentes.
+  clearTimeout(this.searchTimer);
+  this.searchSubscription?.unsubscribe();
+
+  this.error.set('');
+  this.fields.set([]);
+  this.loading.set(true);
+
+  // Attend 300 ms après la dernière modification.
+  this.searchTimer = setTimeout(() => {
+    this.loadFields();
+  }, 300);
+}
+  loadFields(): void {
+     clearTimeout(this.searchTimer);
+    // Si l'utilisateur lance une nouvelle recherche,
+    // on arrête la précédente.
+    this.searchSubscription?.unsubscribe();
+
+    this.loading.set(true);
+    this.error.set('');
+    this.fields.set([]);
+
+    this.searchSubscription = this.catalogApi
+      .getFields(this.city, this.sport)
+      .pipe(
+        // Si le serveur ne répond pas dans les 10 secondes,
+        // on affiche une erreur au lieu d'attendre indéfiniment.
+        timeout(10_000),
+
+        // Arrête la requête si le composant est détruit.
+        takeUntilDestroyed(this.destroyRef),
+
+        // Exécuté quand la requête se termine, échoue ou est annulée.
+        finalize(() => this.loading.set(false))
+      )
+      .subscribe({
+        next: (fields) => {
+          this.fields.set(fields);
+        },
+
+        error: (err: unknown) => {
+          if (err instanceof TimeoutError) {
+            this.error.set(
+              'Le serveur met trop de temps à répondre. Réessayez.'
+            );
+          } else if (err instanceof HttpErrorResponse && err.status === 0) {
+            this.error.set(
+              'Impossible de joindre le serveur. Vérifiez que le backend est démarré.'
+            );
+          } else {
+            this.error.set(
+              'Une erreur est survenue pendant la recherche. Réessayez.'
+            );
+          }
+        }
+      });
+  }
+
+  resetFilters(): void {
+    this.city = '';
+    this.sport = '';
+    this.loadFields();
+  }
+  constructor() {
+  this.destroyRef.onDestroy(() => {
+    clearTimeout(this.searchTimer);
+  });
+}
   readonly sports = [
     { name: 'Football', description: 'Le rendez-vous de votre équipe.', mark: '⚽' },
     { name: 'Padel', description: 'À quatre, le plaisir se partage.', mark: '↗' },

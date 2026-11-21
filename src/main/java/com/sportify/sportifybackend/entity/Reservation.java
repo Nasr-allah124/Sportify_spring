@@ -48,4 +48,21 @@ public class Reservation {
 
     protected Reservation() {
     }
+    public Reservation(
+        User client,
+        Field field,
+        Instant startAt,
+        Instant endAt,
+        BigDecimal totalPrice
+) {
+    this.client = client;
+    this.field = field;
+    this.startAt = startAt;
+    this.endAt = endAt;
+    this.totalPrice = totalPrice;
+}
+public void cancel() {
+    this.status = Status.CANCELLED;
+    this.cancelledAt = Instant.now();
+}
 }

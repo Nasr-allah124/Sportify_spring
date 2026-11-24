@@ -28,6 +28,11 @@ public class FieldImage {
     @Column(nullable = false)
     private int position;
 
-    protected FieldImage() {
-    }
+    @Column(name = "photo_bytes", columnDefinition = "bytea")
+    private byte[] photoBytes;
+
+    @Column(name = "photo_mime", length = 30)
+    private String photoMime;
+
+    protected FieldImage() {}
 }

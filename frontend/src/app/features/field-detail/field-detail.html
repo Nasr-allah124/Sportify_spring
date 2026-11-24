@@ -4,55 +4,77 @@
   </a>
 
   @if (loading()) {
-    <p class="mt-8" role="status">
-      Chargement du terrain...
-    </p>
-
+    <p class="mt-8" role="status">Chargement du terrain…</p>
   } @else if (error()) {
-    <p class="mt-8" role="alert">
-      {{ error() }}
-    </p>
-
+    <p class="mt-8 text-error" role="alert">{{ error() }}</p>
   } @else if (field(); as terrain) {
     <article class="mt-8 max-w-2xl rounded-2xl border border-line bg-surface p-8">
-      <p class="text-sm text-accent">
-        {{ terrain.sportType }}
-      </p>
+      <p class="text-sm text-accent">{{ terrain.sportType }}</p>
+      <h1 class="mt-2 font-display text-4xl font-semibold">{{ terrain.name }}</h1>
 
-      <h1 class="mt-2 font-display text-4xl font-semibold">
-        {{ terrain.name }}
-      </h1>
+      @for (position of photoPositions(); track position) {
+        <img
+          class="mt-4 w-full rounded-xl"
+          loading="lazy"
+          [src]="'/api/v1/field-photos/' + terrain.id + '/' + position"
+          [alt]="terrain.name + ' – photo ' + (position + 1)"
+        >
+      }
 
       <dl class="mt-8 grid gap-5">
         <div>
           <dt class="text-sm text-muted">Complexe</dt>
           <dd>{{ terrain.complex.name }}</dd>
         </div>
-
         <div>
           <dt class="text-sm text-muted">Ville</dt>
           <dd>{{ terrain.complex.city }}</dd>
         </div>
-
         <div>
           <dt class="text-sm text-muted">Adresse</dt>
           <dd>{{ terrain.complex.address }}</dd>
         </div>
+
+        @if (terrain.complex.latitude != null && terrain.complex.longitude != null) {
+          <div>
+            <dt class="text-sm text-muted">Localisation</dt>
+            <dd>
+              <a
+                class="underline"
+                target="_blank"
+                rel="noopener noreferrer"
+                [href]="'https://www.google.com/maps/search/?api=1&query='
+                  + terrain.complex.latitude + ',' + terrain.complex.longitude"
+              >
+                Voir l’entrée du complexe sur la carte
+              </a>
+            </dd>
+          </div>
+        }
 
         <div>
           <dt class="text-sm text-muted">Tarif horaire</dt>
           <dd>{{ terrain.hourlyPrice }} MAD / heure</dd>
         </div>
       </dl>
+      @if (terrain.complex.latitude != null && terrain.complex.longitude != null) {
+        <section class="mt-8 border-t border-line pt-6">
+          <h2 class="font-display text-2xl font-semibold">Accès au complexe</h2>
 
-      <div class="mt-10 border-t border-line pt-8">
-        <h2 class="font-display text-2xl font-semibold">
-          Disponibilités
-        </h2>
+          <p class="mb-4 mt-1 text-sm text-muted">
+            {{ terrain.complex.name }} · {{ terrain.complex.address }}, {{ terrain.complex.city }}
+          </p>
 
-        <p class="mt-2 text-sm text-muted">
-          Choisissez une date pour consulter les créneaux libres.
-        </p>
+          <app-complex-location-map
+            [latitude]="terrain.complex.latitude"
+            [longitude]="terrain.complex.longitude"
+            [name]="terrain.complex.name"
+          />
+        </section>
+      }
+
+      <section class="mt-10 border-t border-line pt-8">
+        <h2 class="font-display text-2xl font-semibold">Disponibilités</h2>
 
         <label for="availability-date" class="mt-6 block text-sm font-semibold">
           Date de votre partie
@@ -60,116 +82,88 @@
 
         <input
           id="availability-date"
-          type="date"
           name="availabilityDate"
+          type="date"
           class="mt-2 rounded-xl border border-line bg-page px-4 py-3"
           [min]="today"
           [ngModel]="selectedDate()"
           [disabled]="booking() || bookingOutcomeUnknown()"
           (ngModelChange)="onDateChange($event)"
-          
         >
-        @if (confirmedReservation(); as reservation) {
-  <div class="mt-6 rounded-xl border border-line bg-soft p-4" role="status">
-    <p class="font-semibold">Réservation confirmée !</p>
-    <p class="mt-2">Référence : {{ reservation.id }}</p>
-    <p>
-      Heure :
-      {{ formatTime(reservation.startAt) }}
-      –
-      {{ formatTime(reservation.endAt) }}
-    </p>
-    <p>Prix confirmé : {{ reservation.totalPrice }} MAD</p>
-  </div>
-}
 
-@if (bookingMessage()) {
-  <p class="mt-6" role="alert">
-    {{ bookingMessage() }}
-  </p>
-}
+        @if (confirmedReservation(); as reservation) {
+          <div class="mt-6 rounded-xl border border-line bg-soft p-4" role="status">
+            <p class="font-semibold">Réservation confirmée</p>
+            <p>Référence · {{ reservation.id }}</p>
+            <p>{{ formatTime(reservation.startAt) }} – {{ formatTime(reservation.endAt) }}</p>
+            <p>Prix confirmé · {{ reservation.totalPrice }} MAD</p>
+          </div>
+        }
+
+        @if (bookingMessage()) {
+          <p class="mt-6" role="alert">{{ bookingMessage() }}</p>
+        }
 
         @if (loadingSlots()) {
-          <p class="mt-6" role="status">
-            Chargement des disponibilités...
-          </p>
-
+          <p class="mt-6" role="status">Chargement des disponibilités…</p>
         } @else if (slotsError()) {
           <div class="mt-6" role="alert">
             <p>{{ slotsError() }}</p>
-
-            <button
-              type="button"
-              class="button-secondary mt-4"
-              (click)="loadAvailability()"
-            >
-              Réessayer
-            </button>
+            @if (selectedDate() >= today) {
+              <button
+                type="button" class="button-secondary mt-4"
+                (click)="loadAvailability()"
+              >
+                Réessayer
+              </button>
+            }
           </div>
-
         } @else if (selectedDate()) {
           @if (slots().length === 0) {
-            <p class="mt-6" role="status">
-              Aucun créneau disponible pour cette date.
-            </p>
+            <p class="mt-6" role="status">Aucun créneau disponible pour cette date.</p>
           } @else {
-            <p class="mt-6 text-sm font-semibold">
-              Créneaux disponibles
-            </p>
+            <p class="mt-6 text-sm font-semibold">Créneaux disponibles</p>
 
-           <ul class="mt-4 flex flex-wrap gap-3">
-  @for (slot of slots(); track slot.startAt) {
-    <li>
-      <button
-        type="button"
-        class="rounded-xl border border-line px-4 py-3 text-sm font-semibold"
-        [class.bg-lime]="selectedSlot()?.startAt === slot.startAt"
-        [class.text-black]="selectedSlot()?.startAt === slot.startAt"
-        [disabled]="booking() || bookingOutcomeUnknown()"
-        [attr.aria-pressed]="selectedSlot()?.startAt === slot.startAt"
-        (click)="selectSlot(slot)"
-      >
-        {{ formatTime(slot.startAt) }}
-        –
-        {{ formatTime(slot.endAt) }}
-      </button>
-    </li>
-  }
-</ul>
+            <ul class="mt-4 flex flex-wrap gap-3">
+              @for (slot of slots(); track slot.startAt) {
+                <li>
+                  <button
+                    type="button"
+                    class="rounded-xl border border-line px-4 py-3 text-sm font-semibold"
+                    [class.bg-lime]="selectedSlot()?.startAt === slot.startAt"
+                    [class.text-black]="selectedSlot()?.startAt === slot.startAt"
+                    [attr.aria-pressed]="selectedSlot()?.startAt === slot.startAt"
+                    [disabled]="booking() || bookingOutcomeUnknown()"
+                    (click)="selectSlot(slot)"
+                  >
+                    {{ formatTime(slot.startAt) }} – {{ formatTime(slot.endAt) }}
+                  </button>
+                </li>
+              }
+            </ul>
 
-@if (selectedSlot(); as selected) {
-  <div class="mt-6 rounded-xl border border-line p-4">
-    <p>
-      Créneau choisi :
-      <strong>
-        {{ formatTime(selected.startAt) }}
-        –
-        {{ formatTime(selected.endAt) }}
-      </strong>
-    </p>
+            @if (selectedSlot(); as selected) {
+              <div class="mt-6 rounded-xl border border-line p-4">
+                <p>
+                  Créneau choisi ·
+                  <strong>{{ formatTime(selected.startAt) }} – {{ formatTime(selected.endAt) }}</strong>
+                </p>
+                <p class="mt-2 text-sm text-muted">
+                  Tarif indiqué · {{ terrain.hourlyPrice }} MAD / heure
+                </p>
 
-    <p class="mt-2 text-sm text-muted">
-      Tarif indiqué : {{ terrain.hourlyPrice }} MAD / heure.
-      Le prix final sera confirmé par le serveur.
-    </p>
-
-    <button
-      type="button"
-      class="button-primary mt-4"
-      [disabled]="booking() || bookingOutcomeUnknown()"
-      (click)="confirmReservation()"
-    >
-      @if (booking()) {
-        Confirmation...
-      } @else {
-        Confirmer la réservation
-      }
-    </button>
-  </div>
-}
+                <button
+                  type="button" class="button-primary mt-4"
+                  [disabled]="booking() || bookingOutcomeUnknown()"
+                  (click)="confirmReservation()"
+                >
+                  {{ booking() ? 'Confirmation…' : 'Confirmer la réservation' }}
+                </button>
+              </div>
+            }
           }
         }
-      </div>
+      </section>
     </article>
   }
 </section>

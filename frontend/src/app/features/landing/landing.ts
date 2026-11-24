@@ -5,6 +5,7 @@ import {
   OnInit,
   signal
 } from '@angular/core';
+import { ComplexLocationMap } from '../settings/complex-location-picker';
 
 import { HttpErrorResponse } from '@angular/common/http';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -23,7 +24,7 @@ import { AuthSession } from '../../core/services/auth-session';
 @Component({
   selector: 'app-landing',
   standalone: true,
-  imports: [RouterLink, FormsModule],
+  imports: [RouterLink, FormsModule, ComplexLocationMap],
   templateUrl: './landing.html'
 })
 export class Landing implements OnInit {
@@ -36,9 +37,29 @@ export class Landing implements OnInit {
   readonly fields = signal<Field[]>([]);
   readonly loading = signal(false);
   readonly error = signal('');
+  readonly openMapFieldId = signal<number | null>(null);
+  readonly missingCoverIds = signal<ReadonlySet<number>>(new Set());
 
-  city = '';
-  sport = '';
+  readonly sportLabels: Record<string, string> = {
+    FOOTBALL: 'Football',
+    PADEL: 'Padel',
+    TENNIS: 'Tennis',
+    BASKETBALL: 'Basket'
+  };
+
+  toggleFieldMap(fieldId: number): void {
+    this.openMapFieldId.update(current => current === fieldId ? null : fieldId);
+  }
+
+  markCoverMissing(fieldId: number): void {
+    this.missingCoverIds.update(current => {
+      const updated = new Set(current);
+      updated.add(fieldId);
+      return updated;
+    });
+  }
+
+  searchQuery = '';
 
   // On garde la recherche en cours pour pouvoir l'annuler.
   private searchSubscription?: Subscription;
@@ -73,7 +94,7 @@ scheduleSearch(): void {
     this.fields.set([]);
 
     this.searchSubscription = this.catalogApi
-      .getFields(this.city, this.sport)
+      .searchFields(this.searchQuery)
       .pipe(
         // Si le serveur ne répond pas dans les 10 secondes,
         // on affiche une erreur au lieu d'attendre indéfiniment.
@@ -109,8 +130,7 @@ scheduleSearch(): void {
   }
 
   resetFilters(): void {
-    this.city = '';
-    this.sport = '';
+    this.searchQuery = '';
     this.loadFields();
   }
   constructor() {

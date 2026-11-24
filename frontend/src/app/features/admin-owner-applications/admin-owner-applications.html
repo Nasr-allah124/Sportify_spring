@@ -4,6 +4,17 @@
   <h1 class="section-title">
     Demandes propriétaire
   </h1>
+  @if (reviewMessage()) {
+    <p role="status" class="mt-4 rounded-xl border border-line bg-soft p-4">
+      {{ reviewMessage() }}
+    </p>
+  }
+
+  @if (reviewError()) {
+    <p role="alert" class="mt-4 rounded-xl bg-error-soft p-4 text-error">
+      {{ reviewError() }}
+    </p>
+  }
 
   <p class="mt-4 text-sm text-muted">
     Consultez les demandes en attente de vérification.
@@ -80,6 +91,67 @@
               Voir le point sur la carte
             </a>
           }
+          <div class="mt-6 border-t border-line pt-5">
+            @if (rejectingId() === application.id) {
+              <label [for]="'reason-' + application.id" class="block text-sm font-semibold">
+                Pourquoi refusez-vous cette demande ?
+              </label>
+
+              <textarea
+                #reasonInput
+                [id]="'reason-' + application.id"
+                [value]="reason()"
+                (input)="reason.set(reasonInput.value)"
+                [disabled]="reviewingId() !== null"
+                maxlength="1000"
+                rows="3"
+                placeholder="Ex. L’adresse indiquée ne correspond pas au point sur la carte."
+                class="mt-2 w-full rounded-xl border border-line bg-page px-4 py-3"
+              ></textarea>
+
+              <p class="mt-1 text-sm text-muted">Ce motif sera visible par le demandeur.</p>
+
+              <div class="mt-4 flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  class="button-secondary text-error"
+                  [disabled]="reviewingId() !== null || !reason().trim()"
+                  (click)="decide(application.id, 'REJECTED')"
+                >
+                  {{ reviewingId() === application.id ? 'Enregistrement…' : 'Confirmer le refus' }}
+                </button>
+
+                <button
+                  type="button"
+                  class="button-secondary"
+                  [disabled]="reviewingId() !== null"
+                  (click)="cancelRejection()"
+                >
+                  Annuler
+                </button>
+              </div>
+            } @else {
+              <div class="flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  class="button-primary"
+                  [disabled]="reviewingId() !== null"
+                  (click)="decide(application.id, 'APPROVED')"
+                >
+                  {{ reviewingId() === application.id ? 'Enregistrement…' : 'Accepter la demande' }}
+                </button>
+
+                <button
+                  type="button"
+                  class="button-secondary"
+                  [disabled]="reviewingId() !== null"
+                  (click)="startRejection(application.id)"
+                >
+                  Refuser
+                </button>
+              </div>
+            }
+          </div>
         </article>
       }
     </div>

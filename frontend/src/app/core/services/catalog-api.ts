@@ -6,6 +6,8 @@ export interface SportComplex {
   name: string;
   city: string;
   address: string;
+  latitude: number | null;
+  longitude: number | null;
 }
 
 export interface Field {
@@ -15,10 +17,12 @@ export interface Field {
   hourlyPrice: number;
   complex: SportComplex;
 }
+
 export interface AvailableSlot {
   startAt: string;
   endAt: string;
 }
+
 export interface ReservationResponse {
   id: number;
   fieldId: number;
@@ -27,6 +31,7 @@ export interface ReservationResponse {
   totalPrice: number;
   status: string;
 }
+
 @Injectable({ providedIn: 'root' })
 export class CatalogApi {
   private readonly http = inject(HttpClient);
@@ -35,13 +40,8 @@ export class CatalogApi {
   getFields(city = '', sport = '') {
     let params = new HttpParams();
 
-    if (city.trim()) {
-      params = params.set('city', city.trim());
-    }
-
-    if (sport) {
-      params = params.set('sport', sport);
-    }
+    if (city.trim()) params = params.set('city', city.trim());
+    if (sport) params = params.set('sport', sport);
 
     return this.http.get<Field[]>(this.baseUrl, { params });
   }
@@ -49,31 +49,27 @@ export class CatalogApi {
   getField(id: number) {
     return this.http.get<Field>(`${this.baseUrl}/${id}`);
   }
-  getAvailability(fieldId: number, date: string, token: string) {
-  const params = new HttpParams().set('date', date);
+  searchFields(query: string) {
+    const params = new HttpParams().set('q', query.trim());
 
-  return this.http.get<AvailableSlot[]>(
-    `${this.baseUrl}/${fieldId}/availability`,
-    {
-      params,
-      headers: {
-        Authorization: `Bearer ${token}`
+    return this.http.get<Field[]>(this.baseUrl, { params });
+  }
+
+  getAvailability(fieldId: number, date: string, token: string) {
+    return this.http.get<AvailableSlot[]>(
+      `${this.baseUrl}/${fieldId}/availability`,
+      {
+        params: new HttpParams().set('date', date),
+        headers: { Authorization: 'Bearer ' + token }
       }
-    }
-  );
-}
-createReservation(fieldId: number, startAt: string, token: string) {
-  return this.http.post<ReservationResponse>(
-    '/api/v1/reservations',
-    {
-      fieldId,
-      startAt
-    },
-    {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
-    }
-  );
-}
+    );
+  }
+
+  createReservation(fieldId: number, startAt: string, token: string) {
+    return this.http.post<ReservationResponse>(
+      '/api/v1/reservations',
+      { fieldId, startAt },
+      { headers: { Authorization: 'Bearer ' + token } }
+    );
+  }
 }

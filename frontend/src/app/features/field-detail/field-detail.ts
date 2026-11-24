@@ -1,22 +1,10 @@
-import {
-  Component,
-  DestroyRef,
-  inject,
-  OnInit,
-  signal
-} from '@angular/core';
-
-import { HttpErrorResponse } from '@angular/common/http';
+import { Component, DestroyRef, inject, OnInit, signal } from '@angular/core';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-
-import {
-  finalize,
-  Subscription,
-  timeout,
-  TimeoutError
-} from 'rxjs';
+import { finalize, Subscription, timeout, TimeoutError } from 'rxjs';
+import { ComplexLocationMap } from '../settings/complex-location-picker';
 
 import {
   AvailableSlot,
@@ -24,41 +12,44 @@ import {
   Field,
   ReservationResponse
 } from '../../core/services/catalog-api';
-
 import { AuthSession } from '../../core/services/auth-session';
 
 @Component({
   selector: 'app-field-detail',
   standalone: true,
-  imports: [RouterLink, FormsModule],
+  imports: [RouterLink, FormsModule, ComplexLocationMap],
   templateUrl: './field-detail.html'
 })
 export class FieldDetail implements OnInit {
+  private readonly http = inject(HttpClient);
   private readonly route = inject(ActivatedRoute);
   private readonly catalogApi = inject(CatalogApi);
   private readonly session = inject(AuthSession);
   private readonly destroyRef = inject(DestroyRef);
-
   private availabilitySubscription?: Subscription;
 
-  // Informations du terrain
   readonly field = signal<Field | null>(null);
+  readonly photoPositions = signal<number[]>([]);
   readonly loading = signal(true);
   readonly error = signal('');
 
-  // Date et disponibilités
   readonly selectedDate = signal('');
   readonly slots = signal<AvailableSlot[]>([]);
+  readonly selectedSlot = signal<AvailableSlot | null>(null);
   readonly loadingSlots = signal(false);
   readonly slotsError = signal('');
 
-  // Date minimale dans le fuseau du complexe.
+  readonly booking = signal(false);
+  readonly bookingMessage = signal('');
+  readonly bookingOutcomeUnknown = signal(false);
+  readonly confirmedReservation = signal<ReservationResponse | null>(null);
+
   readonly today = this.getTodayInCasablanca();
 
   ngOnInit(): void {
     const id = Number(this.route.snapshot.paramMap.get('id'));
 
-    if (!Number.isInteger(id) || id <= 0) {
+    if (!Number.isSafeInteger(id) || id <= 0) {
       this.error.set('Identifiant de terrain invalide.');
       this.loading.set(false);
       return;
@@ -69,33 +60,35 @@ export class FieldDetail implements OnInit {
       takeUntilDestroyed(this.destroyRef),
       finalize(() => this.loading.set(false))
     ).subscribe({
-      next: (field) => {
+      next: field => {
         this.field.set(field);
-      },
 
-      error: (err: unknown) => {
-        if (err instanceof HttpErrorResponse && err.status === 404) {
-          this.error.set('Ce terrain est introuvable.');
-        } else {
-          this.error.set('Impossible de charger ce terrain.');
-        }
+        this.http.get<number[]>('/api/v1/field-photos/' + field.id).pipe(
+          takeUntilDestroyed(this.destroyRef)
+        ).subscribe({
+          next: positions => this.photoPositions.set(positions),
+          error: () => this.photoPositions.set([])
+        });
+      },
+      error: (err: HttpErrorResponse) => {
+        this.error.set(
+          err.status === 404
+            ? 'Ce terrain est introuvable.'
+            : 'Impossible de charger ce terrain.'
+        );
       }
     });
   }
 
   onDateChange(date: string): void {
-    this.selectedSlot.set(null);
-this.bookingMessage.set('');
-    // Arrêter la recherche précédente si la date change.
     this.availabilitySubscription?.unsubscribe();
-
+    this.selectedSlot.set(null);
+    this.bookingMessage.set('');
     this.selectedDate.set(date);
     this.slots.set([]);
     this.slotsError.set('');
 
-    if (!date) {
-      return;
-    }
+    if (!date) return;
 
     if (date < this.today) {
       this.slotsError.set('Choisissez une date à partir d’aujourd’hui.');
@@ -106,18 +99,13 @@ this.bookingMessage.set('');
   }
 
   loadAvailability(): void {
-    // Si l'utilisateur clique sur Réessayer,
-    // arrêter toute requête précédente.
     this.availabilitySubscription?.unsubscribe();
 
     const field = this.field();
     const date = this.selectedDate();
+    if (!field || !date) return;
+
     const token = this.session.token();
-
-    if (!field || !date) {
-      return;
-    }
-
     if (!token) {
       this.session.expire();
       return;
@@ -135,113 +123,86 @@ this.bookingMessage.set('');
         finalize(() => this.loadingSlots.set(false))
       )
       .subscribe({
-        next: (slots) => {
-          this.slots.set(slots);
-        },
-
+        next: slots => this.slots.set(slots),
         error: (err: unknown) => {
           if (err instanceof HttpErrorResponse && err.status === 401) {
             this.session.expire();
           } else if (err instanceof TimeoutError) {
-            this.slotsError.set(
-              'Le serveur met trop de temps à répondre. Réessayez.'
-            );
+            this.slotsError.set('Le serveur met trop de temps à répondre.');
           } else {
-            this.slotsError.set(
-              'Impossible de charger les disponibilités. Réessayez.'
-            );
+            this.slotsError.set('Impossible de charger les disponibilités.');
           }
         }
       });
   }
-// Créneau sélectionné et état de la réservation
-readonly selectedSlot = signal<AvailableSlot | null>(null);
-readonly booking = signal(false);
-readonly bookingMessage = signal('');
-readonly confirmedReservation = signal<ReservationResponse | null>(null);
-selectSlot(slot: AvailableSlot): void {
-  if (this.booking() || this.bookingOutcomeUnknown()) {
-    return;
+
+  selectSlot(slot: AvailableSlot): void {
+    if (this.booking() || this.bookingOutcomeUnknown()) return;
+    this.selectedSlot.set(slot);
+    this.bookingMessage.set('');
   }
 
-  this.selectedSlot.set(slot);
-  this.bookingMessage.set('');
-}
+  confirmReservation(): void {
+    if (this.booking() || this.bookingOutcomeUnknown()) return;
 
-confirmReservation(): void {
-  if (this.booking() || this.bookingOutcomeUnknown()) {
-    return;
-  }
-
-  const field = this.field();
-  const slot = this.selectedSlot();
-  const token = this.session.token();
-
-  if (!field || !slot) {
-    this.bookingMessage.set('Choisissez un créneau.');
-    return;
-  }
-
-  if (!token) {
-    this.session.expire();
-    return;
-  }
-
-  this.booking.set(true);
-  this.bookingMessage.set('');
-  this.confirmedReservation.set(null);
-
-  this.catalogApi.createReservation(field.id, slot.startAt, token).pipe(
-    timeout(15_000),
-    takeUntilDestroyed(this.destroyRef),
-    finalize(() => this.booking.set(false))
-  ).subscribe({
-    next: (reservation) => {
-      this.confirmedReservation.set(reservation);
-      this.selectedSlot.set(null);
-
-      // Actualiser la liste : le créneau réservé disparaît.
-      this.loadAvailability();
-    },
-
-    error: (err: unknown) => {
-      if (err instanceof HttpErrorResponse && err.status === 401) {
-        this.session.expire();
-        return;
-      }
-
-      if (err instanceof HttpErrorResponse && err.status === 409) {
-        this.selectedSlot.set(null);
-        this.bookingMessage.set(
-          'Ce créneau ou son tarif n’est plus disponible. Choisissez un autre créneau.'
-        );
-
-        this.loadAvailability();
-        return;
-      }
-
-      if (
-        err instanceof HttpErrorResponse &&
-        [400, 403, 404].includes(err.status)
-      ) {
-        this.bookingMessage.set(
-          'La demande a été refusée. Vérifiez votre compte et le terrain.'
-        );
-        return;
-      }
-
-      // Un timeout ou une erreur réseau ne dit pas si le serveur
-      // a déjà enregistré la réservation.
-      this.bookingOutcomeUnknown.set(true);
-      this.bookingMessage.set(
-        'La réponse du serveur n’a pas été reçue. Vérifiez si la réservation a été enregistrée avant de réessayer.'
-      );
+    const field = this.field();
+    const slot = this.selectedSlot();
+    if (!field || !slot) {
+      this.bookingMessage.set('Choisissez un créneau.');
+      return;
     }
-  });
-}
-// Vrai si la réponse du serveur n'est pas arrivée :
-// on ne sait pas encore si la réservation a été enregistrée.
-readonly bookingOutcomeUnknown = signal(false);
+
+    const token = this.session.token();
+    if (!token) {
+      this.session.expire();
+      return;
+    }
+
+    this.booking.set(true);
+    this.bookingMessage.set('');
+    this.confirmedReservation.set(null);
+
+    this.catalogApi.createReservation(field.id, slot.startAt, token).pipe(
+      timeout(15_000),
+      takeUntilDestroyed(this.destroyRef),
+      finalize(() => this.booking.set(false))
+    ).subscribe({
+      next: reservation => {
+        this.confirmedReservation.set(reservation);
+        this.selectedSlot.set(null);
+        this.loadAvailability();
+      },
+      error: (err: unknown) => {
+        if (err instanceof HttpErrorResponse) {
+          if (err.status === 401) {
+            this.session.expire();
+            return;
+          }
+
+          if (err.status === 409) {
+            this.selectedSlot.set(null);
+            this.bookingMessage.set(
+              'Ce créneau ou son tarif a changé. Choisissez un autre créneau.'
+            );
+            this.loadAvailability();
+            return;
+          }
+
+          if ([400, 403, 404].includes(err.status)) {
+            this.bookingMessage.set(
+              'La réservation a été refusée. Vérifiez votre compte et le terrain.'
+            );
+            return;
+          }
+        }
+
+        this.bookingOutcomeUnknown.set(true);
+        this.bookingMessage.set(
+          'Réponse du serveur non reçue. Vérifiez « Mes réservations » avant de réessayer.'
+        );
+      }
+    });
+  }
 
   formatTime(value: string): string {
     return new Intl.DateTimeFormat('fr-FR', {
@@ -267,3 +228,4 @@ readonly bookingOutcomeUnknown = signal(false);
     return `${year}-${month}-${day}`;
   }
 }
+

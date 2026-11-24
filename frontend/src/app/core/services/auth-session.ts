@@ -7,6 +7,37 @@ export class AuthSession {
   private readonly router = inject(Router);
   private readonly current = signal<LoginResponse | null>(null);
   private expiryTimer?: ReturnType<typeof setTimeout>;
+  private readonly storageKey = 'sportify.session';
+
+  constructor() {
+    this.restoreSession();
+  }
+
+  private restoreSession(): void {
+    if (typeof window === 'undefined') return;
+
+    const saved = sessionStorage.getItem(this.storageKey);
+    if (!saved) return;
+
+    try {
+      const session: LoginResponse = JSON.parse(saved);
+      const expiresAt = Date.parse(session.expiresAt);
+
+      if (
+        !session.accessToken ||
+        !Number.isFinite(expiresAt) ||
+        expiresAt <= Date.now()
+      ) {
+        this.clear();
+        return;
+      }
+
+      // Restaure le signal et relance le minuteur d'expiration existant.
+      this.start(session);
+    } catch {
+      this.clear();
+    }
+  }
 
   readonly signedIn = computed(() => this.current() !== null);
 
@@ -17,6 +48,9 @@ export class AuthSession {
     if (!Number.isFinite(remaining) || remaining <= 0) return;
 
     this.current.set(response);
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem(this.storageKey, JSON.stringify(response));
+    }
     this.expiryTimer = setTimeout(() => this.expire(), remaining);
   }
 
@@ -42,6 +76,9 @@ export class AuthSession {
   private clear(): void {
     clearTimeout(this.expiryTimer);
     this.current.set(null);
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem(this.storageKey);
+    }
   }
 }
 

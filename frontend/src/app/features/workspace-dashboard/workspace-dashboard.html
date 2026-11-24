@@ -1,0 +1,184 @@
+<main class="page-container board">
+  <header class="board-head">
+    <div>
+      <p class="context">{{ admin ? 'Administration' : 'Espace propriétaire' }}</p>
+      <h1>{{ admin ? 'Vue d’ensemble' : 'Mon activité' }}</h1>
+    </div>
+    <button class="button-secondary" (click)="refresh()" [disabled]="busy()">
+      Actualiser
+    </button>
+  </header>
+
+  @if (error()) {
+    <p role="alert" class="text-error">{{ error() }}</p>
+  }
+  @if (busy()) {
+    <p role="status" class="text-muted">Chargement des données…</p>
+  }
+
+  @if (activity(); as a) {
+    <div class="overview">
+      <section class="panel chart-panel">
+        <div class="panel-head">
+          <div>
+            <h2>Réservations par jour de match</h2>
+            <p class="text-muted">Du {{ formatDay(a.from) }} au {{ formatDay(a.through) }}</p>
+          </div>
+          <div class="period" aria-label="Période">
+            <button [attr.aria-pressed]="days() === 7"
+                    (click)="changePeriod(7)">7 jours</button>
+            <button [attr.aria-pressed]="days() === 30"
+                    (click)="changePeriod(30)">30 jours</button>
+          </div>
+        </div>
+
+        <div class="legend">
+          <span><i class="green"></i>{{ confirmed() }} confirmées</span>
+          <span><i class="orange"></i>{{ cancelled() }} annulées</span>
+        </div>
+
+        @if (confirmed() || cancelled()) {
+          <div class="plot">
+            @for (d of a.days; track d.day) {
+              <button class="bar-day"
+                      [attr.aria-label]="formatDay(d.day) + ', ' + d.confirmed
+                        + ' confirmées, ' + d.cancelled + ' annulées'"
+                      (focus)="selectedDay.set(d.day)"
+                      (mouseenter)="selectedDay.set(d.day)"
+                      (click)="selectedDay.set(d.day)">
+                <span class="segment orange"
+                      [style.height.%]="100 * d.cancelled / peak()"></span>
+                <span class="segment green"
+                      [style.height.%]="100 * d.confirmed / peak()"></span>
+              </button>
+            }
+          </div>
+          <div class="axis">
+            <span>{{ formatDay(a.from) }}</span><span>{{ formatDay(a.through) }}</span>
+          </div>
+          @if (focused(); as d) {
+            <p class="text-sm">
+              {{ formatDay(d.day) }} · {{ d.confirmed }} confirmées · {{ d.cancelled }} annulées
+            </p>
+          }
+        } @else {
+          <div class="empty-chart">
+            Aucune réservation prévue sur cette période.
+          </div>
+        }
+      </section>
+
+      <aside class="panel side">
+        @if (summary(); as s) {
+          <h2>Plateforme</h2>
+          <strong class="big">{{ s.totals.accounts }}</strong>
+          <p>comptes inscrits</p>
+          <p class="text-muted">{{ s.totals.clients }} clients · {{ s.totals.owners }} propriétaires</p>
+          <a routerLink="/admin/demandes-proprietaire" class="action">
+            Demandes en attente <b>{{ s.totals.pending }}</b> ↗
+          </a>
+        } @else {
+          <h2>Mon complexe</h2>
+          <strong class="big">{{ a.complexes.length }}</strong>
+          <p>complexes rattachés à mon compte</p>
+          <a
+            routerLink="/proprietaire/complexes/nouveau"
+            class="mt-4 inline-flex w-fit items-center justify-center rounded-full
+         bg-[#173522] px-5 py-3 text-sm font-semibold text-white
+         hover:bg-[#244c34] focus-visible:outline-2"
+          >
+            {{ "Ajouter Terrain" }}
+          </a>
+        }
+      </aside>
+    </div>
+
+
+
+    <section id="reservations" class="panel">
+      <h2>{{ admin ? 'Journal des réservations' : 'Réservations reçues' }}</h2>
+      <p class="text-muted">Matchs de la période · heure du Maroc</p>
+      <div class="scroll">
+        <table>
+          <thead><tr>
+            <th>Client</th><th>Complexe / terrain</th><th>Réservé le</th>
+            <th>Début du match</th><th>Fin du match</th><th>Statut</th>
+          </tr></thead>
+          <tbody>
+            @for (b of a.bookings; track b.id) {
+              <tr>
+                <th scope="row">{{ b.client }}</th>
+                <td>{{ b.complex }} · {{ b.field }}</td>
+                <td>{{ formatTime(b.createdAt) }}</td>
+                <td>{{ formatTime(b.startAt) }}</td>
+                <td>{{ formatTime(b.endAt) }}</td>
+                <td>{{ b.status === 'CONFIRMED' ? 'Confirmée' : 'Annulée' }}</td>
+              </tr>
+            } @empty {
+              <tr><td colspan="6">Aucune réservation sur cette période.</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      @if (a.page > 0 || a.hasNext) {
+        <div class="pager">
+          <button class="button-secondary" [disabled]="busy() || a.page === 0"
+                  (click)="changePage(a.page - 1)">Précédent</button>
+          <span>Page {{ a.page + 1 }}</span>
+          <button class="button-secondary" [disabled]="busy() || !a.hasNext"
+                  (click)="changePage(a.page + 1)">Suivant</button>
+        </div>
+      }
+    </section>
+    <app-owner-field-list />
+
+    @if (summary(); as s) {
+      <section class="panel">
+        <h2>Propriétaires et sports</h2>
+        <p class="text-muted">Ensemble des complexes et réservations, toutes dates</p>
+        <div class="scroll">
+          <table>
+            <thead><tr>
+              <th>Propriétaire</th><th>Complexes</th><th>Terrains</th>
+              <th>Complexes par sport</th><th>Confirmées</th><th>Annulées</th>
+            </tr></thead>
+            <tbody>
+              @for (o of s.owners; track o.id) {
+                <tr><th scope="row">{{ o.name }}</th><td>{{ o.complexes }}</td>
+                  <td>{{ o.fields }}</td><td>{{ o.complexesBySport || '—' }}</td>
+                  <td>{{ o.confirmed }}</td><td>{{ o.cancelled }}</td></tr>
+              } @empty {
+                <tr><td colspan="6">Aucun propriétaire enregistré.</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="utilisateurs" class="panel">
+        <div class="panel-head">
+          <h2>Utilisateurs</h2>
+          <input #search type="search" aria-label="Rechercher un utilisateur"
+                 placeholder="Nom, email ou rôle" [value]="query()"
+                 (input)="query.set(search.value)"
+                 class="rounded-xl border border-line bg-page px-4 py-2" />
+        </div>
+        <div class="scroll">
+          <table>
+            <thead><tr>
+              <th>Nom</th><th>Email</th><th>Rôle</th><th>Réservations toutes dates</th>
+            </tr></thead>
+            <tbody>
+              @for (u of accounts(); track u.id) {
+                <tr><th scope="row">{{ u.name }}</th><td>{{ u.email }}</td>
+                  <td>{{ u.role }}</td><td>{{ u.bookings }}</td></tr>
+              } @empty {
+                <tr><td colspan="4">Aucun compte correspondant.</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+    }
+  }
+</main>

@@ -1,0 +1,285 @@
+<main class="page-container py-10">
+  <div class="mx-auto max-w-3xl">
+    <a routerLink="/proprietaire" class="text-sm font-semibold text-muted">
+      ← Mon activité
+    </a>
+
+    <h1 class="mt-4 font-display text-4xl font-semibold">Créer mon complexe</h1>
+
+    @if (loadingSites()) {
+      <p role="status" class="mt-6 text-muted">Chargement des emplacements…</p>
+    } @else if (sitesError()) {
+      <p role="alert" class="mt-5 rounded-xl bg-error-soft p-4 text-error">
+        {{ sitesError() }}
+      </p>
+      <button type="button" class="button-secondary mt-3" (click)="loadSites()">
+        Réessayer
+      </button>
+    } @else if (submitted()) {
+      <p role="status" class="mt-6">Votre complexe a été créé.</p>
+      <a routerLink="/proprietaire" fragment="complexes" class="button-primary mt-3">
+        Voir mes complexes
+      </a>
+    } @else {
+      <form #form="ngForm" (ngSubmit)="submit()" class="mt-6">
+        <fieldset
+          [disabled]="sending()"
+          class="grid min-w-0 gap-5 rounded-3xl border border-line bg-surface p-6 sm:p-8"
+        >
+          <h2 class="font-display text-2xl font-semibold">Emplacement</h2>
+
+          @if (sites().length) {
+            <label class="grid gap-2">
+              Site du complexe
+              <select
+                name="applicationId"
+                [ngModel]="applicationId"
+                (ngModelChange)="selectSite($event)"
+                class="rounded-xl border border-line bg-page p-3"
+              >
+                @for (site of sites(); track site.id) {
+                  <option [ngValue]="site.id">
+                    {{ site.name }} · {{ site.city }} · {{ site.address }}
+                  </option>
+                }
+                <option [ngValue]="null">Ajouter un nouvel emplacement</option>
+              </select>
+            </label>
+          }
+
+          @if (applicationId === null) {
+            <label class="grid gap-2">
+              Nom du complexe
+              <input
+                name="newName"
+                [(ngModel)]="newName"
+                required
+                maxlength="150"
+                placeholder="Ex. Atlas Padel Club"
+                class="rounded-xl border border-line bg-page p-3"
+              />
+            </label>
+
+            <label class="grid gap-2">
+              Rechercher une ville
+              <input
+                #citySearch
+                type="search"
+                [value]="cityQuery()"
+                (input)="searchCity(citySearch.value)"
+                placeholder="Tapez au moins deux lettres"
+                class="rounded-xl border border-line bg-page p-3"
+              />
+            </label>
+
+            @if (loadingCities()) {
+              <p role="status" class="text-sm text-muted">Chargement des villes…</p>
+            } @else if (citiesError()) {
+              <div>
+                <p role="alert" class="text-sm text-error">{{ citiesError() }}</p>
+                <button type="button" class="button-secondary mt-2" (click)="loadCities()">
+                  Recharger les villes
+                </button>
+              </div>
+            } @else {
+              <label class="grid gap-2">
+                Ville du complexe
+                <select
+                  #citySelect
+                  [value]="chosenCity()?.id ?? ''"
+                  (change)="chooseCity(citySelect.value)"
+                  class="rounded-xl border border-line bg-page p-3"
+                >
+                  <option value="">Choisissez une ville</option>
+                  @for (city of cityResults(); track city.id) {
+                    <option [value]="city.id">
+                      {{ city.name }} ({{ city.latitude.toFixed(3) }}, {{ city.longitude.toFixed(3) }})
+                    </option>
+                  }
+                </select>
+              </label>
+
+              @if (cityQuery().trim().length >= 2 && !cityResults().length) {
+                <p class="text-sm text-muted">Aucune ville trouvée pour cette recherche.</p>
+              }
+            }
+
+            <label class="grid gap-2">
+              Adresse du complexe
+              <input
+                name="newAddress"
+                [(ngModel)]="newAddress"
+                required
+                maxlength="255"
+                class="rounded-xl border border-line bg-page p-3"
+              />
+            </label>
+
+            <label class="grid gap-2">
+              Téléphone du complexe
+              <input
+                name="newPhone"
+                [(ngModel)]="newPhone"
+                type="tel"
+                required
+                maxlength="30"
+                class="rounded-xl border border-line bg-page p-3"
+              />
+            </label>
+
+            @for (mapCity of mapCities(); track mapCity.id) {
+              <app-complex-location-picker
+                [cityCenter]="mapCity"
+                [initialPoint]="chosenPoint()"
+                (pointSelected)="chosenPoint.set($event)"
+              />
+            }
+
+            @if (chosenPoint(); as point) {
+              <p role="status" class="text-sm text-muted">
+                Entrée sélectionnée · {{ point.latitude }}, {{ point.longitude }}
+              </p>
+            }
+          }
+
+          <h2 class="mt-2 font-display text-2xl font-semibold">Présentation</h2>
+
+          <label class="grid gap-2">
+            Description du complexe
+            <textarea
+              name="description"
+              [(ngModel)]="description"
+              required
+              maxlength="2000"
+              rows="4"
+              placeholder="Présentez les installations, l’accès et les services disponibles."
+              class="rounded-xl border border-line bg-page p-3"
+            ></textarea>
+          </label>
+
+          <label class="grid gap-2">
+            Photos du complexe
+            <input
+              #files
+              type="file"
+              accept="image/jpeg,image/png"
+              multiple
+              (change)="choosePhotos(files)"
+              class="rounded-xl border border-line bg-page p-3"
+            />
+            <span class="text-sm text-muted">
+              1 à 4 photos JPEG ou PNG, jusqu’à 2 Mo chacune. La première sera la couverture.
+            </span>
+          </label>
+
+          @if (photos.length) {
+            <ul class="text-sm text-muted">
+              @for (photo of photos; track $index) {
+                <li>{{ $first ? 'Couverture' : 'Photo ' + ($index + 1) }} · {{ photo.name }}</li>
+              }
+            </ul>
+          }
+
+          <h2 class="mt-2 font-display text-2xl font-semibold">Premier terrain</h2>
+
+          <label class="grid gap-2">
+            Nom du terrain
+            <input
+              name="fieldName"
+              [(ngModel)]="fieldName"
+              required
+              maxlength="150"
+              placeholder="Ex. Terrain Atlas 1"
+              class="rounded-xl border border-line bg-page p-3"
+            />
+          </label>
+
+          <div class="grid gap-4 sm:grid-cols-2">
+            <label class="grid gap-2">
+              Sport
+              <select
+                name="sport"
+                [(ngModel)]="sport"
+                class="rounded-xl border border-line bg-page p-3"
+              >
+                <option value="FOOTBALL">Football</option>
+                <option value="PADEL">Padel</option>
+                <option value="TENNIS">Tennis</option>
+                <option value="BASKETBALL">Basketball</option>
+              </select>
+            </label>
+
+            <label class="grid gap-2">
+              Tarif horaire (DH)
+              <input
+                name="hourlyPrice"
+                [(ngModel)]="hourlyPrice"
+                type="number"
+                min="0.01"
+                max="99999999.99"
+                step="0.01"
+                required
+                class="rounded-xl border border-line bg-page p-3"
+              />
+            </label>
+          </div>
+
+          <fieldset>
+            <legend class="mb-3 font-semibold">Jours d’ouverture</legend>
+            <div class="flex flex-wrap gap-4">
+              @for (day of days; track day.value) {
+                <label class="flex items-center gap-2">
+                  <input
+                    #dayBox
+                    type="checkbox"
+                    [checked]="openDays.has(day.value)"
+                    (change)="setDay(day.value, dayBox.checked)"
+                  />
+                  {{ day.label }}
+                </label>
+              }
+            </div>
+          </fieldset>
+
+          <div class="grid gap-4 sm:grid-cols-2">
+            <label class="grid gap-2">
+              Ouverture
+              <input
+                name="opens"
+                [(ngModel)]="opens"
+                type="time"
+                required
+                class="rounded-xl border border-line bg-page p-3"
+              />
+            </label>
+
+            <label class="grid gap-2">
+              Fermeture
+              <input
+                name="closes"
+                [(ngModel)]="closes"
+                type="time"
+                required
+                class="rounded-xl border border-line bg-page p-3"
+              />
+            </label>
+          </div>
+
+          @if (error()) {
+            <p role="alert" class="rounded-xl bg-error-soft p-4 text-error">
+              {{ error() }}
+            </p>
+          }
+
+          <button
+            type="submit"
+            class="button-primary"
+            [disabled]="sending() || form.invalid"
+          >
+            {{ sending() ? 'Publication en cours…' : 'Publier le complexe et son terrain' }}
+          </button>
+        </fieldset>
+      </form>
+    }
+  </div>
+</main>

@@ -142,3 +142,107 @@ export class ComplexLocationPicker {
     }
   }
 }
+@Component({
+  selector: 'app-complex-location-map',
+  standalone: true,
+  host: { class: 'block min-w-0' },
+  template: `
+    <div
+      #mapHost
+      class="relative z-0 w-full overflow-hidden rounded-2xl border border-line"
+      style="height: 285px"
+      [attr.aria-label]="'Carte du complexe ' + name()"
+    ></div>
+
+    @if (error()) {
+      <p role="status" class="mt-2 text-sm text-muted">{{ error() }}</p>
+    }
+
+    <div class="mt-3 flex flex-wrap items-center justify-between gap-3">
+      <p class="text-sm text-muted">Le repère indique l’entrée du complexe.</p>
+
+      <a
+        class="text-sm font-semibold underline"
+        [href]="'https://www.google.com/maps/search/?api=1&query='
+          + latitude() + ',' + longitude()"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        Ouvrir dans Google Maps ↗
+      </a>
+    </div>
+  `
+})
+export class ComplexLocationMap {
+  readonly latitude = input.required<number>();
+  readonly longitude = input.required<number>();
+  readonly name = input.required<string>();
+  readonly error = signal('');
+
+  private readonly mapHost =
+    viewChild.required<ElementRef<HTMLDivElement>>('mapHost');
+
+  private readonly destroyRef = inject(DestroyRef);
+
+  constructor() {
+    afterNextRender(() => void this.openMap());
+  }
+
+  private async openMap(): Promise<void> {
+    try {
+      const L = await import('leaflet');
+      if (this.destroyRef.destroyed) return;
+
+      const host = this.mapHost().nativeElement;
+      const position: LatLngTuple = [this.latitude(), this.longitude()];
+
+      const map = L.map(host, {
+        scrollWheelZoom: false,
+        zoomControl: true
+      }).setView(position, 16);
+
+      const observer = new ResizeObserver(() => {
+        map.invalidateSize({ pan: false });
+      });
+
+      this.destroyRef.onDestroy(() => {
+        observer.disconnect();
+        map.remove();
+      });
+
+      observer.observe(host);
+
+      const tiles = L.tileLayer(
+        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+        {
+          maxZoom: 19,
+          attribution:
+            '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        }
+      );
+
+      tiles.on('tileerror', () => {
+        this.error.set('Certaines zones de la carte n’ont pas pu être chargées.');
+      });
+
+      tiles.addTo(map);
+
+      const label = document.createElement('span');
+      label.textContent = this.name();
+
+      L.circleMarker(position, {
+        radius: 9,
+        color: '#183927',
+        weight: 3,
+        fillColor: '#c4ef69',
+        fillOpacity: 1
+      })
+        .addTo(map)
+        .bindTooltip(label, { direction: 'top', offset: [0, -8] });
+    } catch {
+      if (!this.destroyRef.destroyed) {
+        this.error.set('La carte est indisponible. Vous pouvez ouvrir Google Maps.');
+      }
+    }
+  }
+}

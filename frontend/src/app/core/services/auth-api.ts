@@ -26,6 +26,7 @@ export interface UserProfile {
   phone?: string | null;
 }
 
+
 @Injectable({ providedIn: 'root' })
 export class AuthApi {
   private readonly http = inject(HttpClient);

@@ -15,6 +15,15 @@ import java.util.Optional;
 
 import java.text.Normalizer;
 import java.util.Locale;
+import java.text.Normalizer;
+import java.util.Arrays;
+import java.util.EnumSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Service
 @Transactional(readOnly = true)
@@ -72,5 +81,74 @@ private String normalizeCity(String city) {
     public Optional<FieldResponse> findField(Long id) {
         return fields.findByIdAndActiveTrueAndComplex_Status(id, SportComplex.Status.ACTIVE)
                 .map(FieldResponse::from);
+    }
+    private static final Pattern ACCENTS = Pattern.compile("\\p{M}+");
+    private static final Pattern SEPARATORS = Pattern.compile("[^\\p{L}\\p{N}]+");
+
+    public List<FieldResponse> searchFields(String query) {
+        String normalizedQuery = normalizeSearchText(query);
+
+        List<Field> visibleFields = fields.findVisibleFields(
+                SportComplex.Status.ACTIVE,
+                "",
+                EnumSet.allOf(Field.SportType.class)
+        );
+
+        if (normalizedQuery.isEmpty()) {
+            return visibleFields.stream()
+                    .map(FieldResponse::from)
+                    .toList();
+        }
+
+        List<String> words = Arrays.stream(normalizedQuery.split(" "))
+                .distinct()
+                .toList();
+
+        return visibleFields.stream()
+                .filter(field -> {
+                    String text = searchableText(field);
+                    return words.stream().allMatch(text::contains);
+                })
+                .map(FieldResponse::from)
+                .toList();
+    }
+
+    private static String searchableText(Field field) {
+        SportComplex complex = field.getComplex();
+
+        String price = field.getHourlyPrice() == null
+                ? null
+                : field.getHourlyPrice().stripTrailingZeros().toPlainString()
+                + " MAD DH dirhams";
+
+        String capacity = field.getCapacity() == null
+                ? null
+                : field.getCapacity() + " joueurs personnes places";
+
+        String text = Stream.of(
+                        field.getName(),
+                        field.getSportType().name(),
+                        field.getDescription(),
+                        complex.getName(),
+                        complex.getCity(),
+                        complex.getAddress(),
+                        complex.getDescription(),
+                        price,
+                        capacity
+                )
+                .filter(Objects::nonNull)
+                .collect(Collectors.joining(" "));
+
+        return normalizeSearchText(text);
+    }
+
+    private static String normalizeSearchText(String value) {
+        if (value == null || value.isBlank()) return "";
+
+        String text = Normalizer.normalize(value, Normalizer.Form.NFD);
+        text = ACCENTS.matcher(text).replaceAll("");
+        text = text.toLowerCase(Locale.ROOT);
+
+        return SEPARATORS.matcher(text).replaceAll(" ").strip();
     }
 }

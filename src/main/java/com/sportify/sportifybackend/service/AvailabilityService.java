@@ -32,18 +32,18 @@ public class AvailabilityService {
             Duration.ofHours(1);
 
     private final FieldRepository fields;
-    private final OpeningHourRepository openingHours;
+    private final FieldScheduleService schedules;
     private final ReservationRepository reservations;
     private final FieldUnavailabilityRepository unavailabilities;
 
     public AvailabilityService(
             FieldRepository fields,
-            OpeningHourRepository openingHours,
+            FieldScheduleService schedules,
             ReservationRepository reservations,
             FieldUnavailabilityRepository unavailabilities
     ) {
         this.fields = fields;
-        this.openingHours = openingHours;
+        this.schedules = schedules;
         this.reservations = reservations;
         this.unavailabilities = unavailabilities;
     }
@@ -65,19 +65,18 @@ public class AvailabilityService {
                 ));
 
         // 2. Horaire du complexe pour le jour demandé.
-        OpeningHour hours = openingHours
-                .findByComplex_IdAndDayOfWeek(
-                        field.getComplex().getId(),
-                        date.getDayOfWeek()
-                )
+        var hours = schedules.effectiveHours(fieldId, field.getComplex().getId())
+                .stream()
+                .filter(h -> h.day() == date.getDayOfWeek())
+                .findFirst()
                 .orElse(null);
 
         if (hours == null) {
             return List.of();
         }
 
-        LocalDateTime opening = date.atTime(hours.getOpeningTime());
-        LocalDateTime closing = date.atTime(hours.getClosingTime());
+        LocalDateTime opening = date.atTime(hours.opening());
+        LocalDateTime closing = date.atTime(hours.closing());
 
         // Pour cette étape, on accepte les horaires
         // dont l'ouverture et la fermeture sont le même jour.

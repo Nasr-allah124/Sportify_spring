@@ -30,4 +30,16 @@ export class AdminOwnerApi {
       }
     );
   }
+  review(
+    id: number,
+    decision: 'APPROVED' | 'REJECTED',
+    reason: string | null,
+    token: string
+  ) {
+    return this.http.patch<void>(
+      `/api/v1/admin/owner-applications/${id}/decision`,
+      { decision, reason },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+  }
 }

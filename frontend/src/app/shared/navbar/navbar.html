@@ -1,130 +1,176 @@
 <header
   class="sticky top-0 z-40 border-b border-line bg-page/95 backdrop-blur-xl"
-  (keydown.escape)="menuOpen.set(false)"
+  (keydown.escape)="closeMenu()"
 >
   <nav
-    class="page-container flex h-21 items-center justify-between gap-5"
+    class="page-container flex h-21 items-center justify-between gap-4"
     aria-label="Navigation principale"
   >
+    <!-- Logo -->
     <a
-      routerLink="/"
+      [routerLink]="home()"
+      (click)="closeMenu()"
       aria-label="Sportify, accueil"
       class="relative inline-flex shrink-0 items-center"
     >
-      <img src="/images/sportify-logo.png" alt="" class="block h-10 w-auto sm:h-12" />
+      <img
+        src="/images/sportify-logo.png"
+        alt=""
+        class="block h-10 w-auto sm:h-12"
+      />
 
       <img
         src="/images/sportify-logo.png"
         alt=""
         aria-hidden="true"
-        class="pointer-events-none absolute inset-0 hidden h-full w-full brightness-0 invert dark:block"
-        style="clip-path: inset(0 0 0 28%)"
+        class="pointer-events-none absolute inset-0 hidden h-full w-full
+               brightness-0 invert [clip-path:inset(0_0_0_28%)] dark:block"
       />
     </a>
 
-    <div class="hidden items-center gap-7 lg:flex">
-      @for (link of links; track link.fragment) {
+    <!-- Navigation ordinateur -->
+    <div class="hidden items-center gap-5 xl:flex">
+      @for (item of navItems(); track item.label) {
         <a
-          routerLink="/"
-          [fragment]="link.fragment"
-          class="text-[13px] font-medium text-muted hover:text-ink"
-          >{{ link.text }}</a
+          [routerLink]="item.path"
+          [fragment]="item.fragment"
+          class="rounded-md px-1 py-2 text-sm font-semibold text-muted
+                 transition-colors hover:text-ink focus-visible:outline-2"
         >
+          {{ item.label }}
+        </a>
+      }
+
+      @if (profileFailed()) {
+        <button
+          type="button"
+          (click)="retryProfile()"
+          class="text-sm font-semibold text-muted underline"
+        >
+          Recharger la navigation
+        </button>
       }
     </div>
 
-    <div class="flex items-center gap-3">
+    <!-- Actions à droite -->
+    <div class="flex shrink-0 items-center gap-2 sm:gap-3">
       <app-theme-toggle />
+
       @if (session.signedIn()) {
-         <a
-          routerLink="/mes-reservations"
-          class="hidden px-2 text-sm font-semibold text-muted hover:text-ink lg:inline-flex"
-        >
-          Mes réservations
-        </a>
-     
-         <a
-          routerLink="/parametres"
-          class="hidden px-2 text-sm font-semibold text-muted hover:text-ink lg:inline-flex"
-        >
-          Paramètres
-        </a>
         <button
           type="button"
-          (click)="session.logout()"
-          class="hidden px-2 text-sm font-semibold text-muted hover:text-ink sm:block"
+          (click)="logout()"
+          class="hidden rounded-md px-2 py-2 text-sm font-semibold
+                 text-muted hover:text-ink xl:inline-flex"
         >
           Se déconnecter
         </button>
 
-        <a routerLink="/profil" class="button-primary hidden sm:inline-flex"> Mon profil </a>
+        <a routerLink="/profil" class="button-primary hidden xl:inline-flex">
+          Mon profil
+        </a>
       } @else {
-        <a routerLink="/login" class="hidden px-2 text-sm font-semibold sm:block"> Se connecter </a>
+        <a
+          routerLink="/login"
+          class="hidden px-2 py-2 text-sm font-semibold
+                 text-muted hover:text-ink xl:inline-flex"
+        >
+          Se connecter
+        </a>
 
-        <a routerLink="/register" class="button-primary hidden md:inline-flex">
+        <a routerLink="/register" class="button-primary hidden xl:inline-flex">
           Créer mon compte
         </a>
       }
+
       <button
         type="button"
-        class="flex size-11 items-center justify-center rounded-full border border-line text-xl lg:hidden"
+        (click)="toggleMenu()"
         aria-controls="mobile-navigation"
         [attr.aria-expanded]="menuOpen()"
         [attr.aria-label]="menuOpen() ? 'Fermer le menu' : 'Ouvrir le menu'"
-        (click)="toggleMenu()"
+        class="flex size-11 items-center justify-center rounded-full
+               border border-line text-xl hover:bg-soft xl:hidden"
       >
         <span aria-hidden="true">{{ menuOpen() ? '×' : '☰' }}</span>
       </button>
     </div>
   </nav>
 
+  <!-- Navigation mobile et tablette -->
   @if (menuOpen()) {
-    <div
+    <nav
       id="mobile-navigation"
-      class="page-container grid gap-1 border-t border-line py-4 lg:hidden"
+      aria-label="Menu mobile"
+      class="page-container grid gap-1 border-t border-line py-4 xl:hidden"
     >
-      @for (link of links; track link.fragment) {
+      @for (item of navItems(); track item.label) {
         <a
-          routerLink="/"
-          [fragment]="link.fragment"
-          (click)="menuOpen.set(false)"
-          class="rounded-lg px-3 py-3 text-sm hover:bg-soft"
-          >{{ link.text }}</a
-        >
-      }
-      <a
-        routerLink="/"
-        fragment="faq"
-        (click)="menuOpen.set(false)"
-        class="rounded-lg px-3 py-3 text-sm hover:bg-soft"
-        >Questions fréquentes</a
-      >
-      @if (session.signedIn()) {
-        <a routerLink="/profil" (click)="menuOpen.set(false)" class="button-primary mt-3"
-          >Mon profil</a
-        >
-        <a
-          routerLink="/mes-reservations"
-          (click)="menuOpen.set(false)"
+          [routerLink]="item.path"
+          [fragment]="item.fragment"
+          (click)="closeMenu()"
           class="rounded-lg px-3 py-3 text-sm font-semibold hover:bg-soft"
         >
-          Mes réservations
+          {{ item.label }}
         </a>
-        <a routerLink="/parametres" class="text-sm font-semibold hover:underline"> Paramètres </a>
+      }
+
+      @if (profileFailed()) {
         <button
           type="button"
-          (click)="menuOpen.set(false); session.logout()"
-          class="rounded-lg px-3 py-3 text-left text-sm font-semibold hover:bg-soft sm:hidden"
+          (click)="retryProfile()"
+          class="rounded-lg px-3 py-3 text-left text-sm font-semibold underline"
         >
-          Se déconnecter
+          Recharger la navigation
         </button>
-       
+      }
+
+      @if (session.signedIn()) {
+        <div class="mt-2 grid gap-2 border-t border-line pt-3">
+          <a
+            routerLink="/profil"
+            (click)="closeMenu()"
+            class="button-primary"
+          >
+            Mon profil
+          </a>
+
+          <button
+            type="button"
+            (click)="logout()"
+            class="button-secondary"
+          >
+            Se déconnecter
+          </button>
+        </div>
       } @else {
-        <div class="mt-3 grid grid-cols-2 gap-3">
-          <a routerLink="/login" class="button-secondary">Se connecter</a>
-          <a routerLink="/register" class="button-primary">S’inscrire</a>
+        <a
+          routerLink="/"
+          fragment="faq"
+          (click)="closeMenu()"
+          class="rounded-lg px-3 py-3 text-sm hover:bg-soft"
+        >
+          Questions fréquentes
+        </a>
+
+        <div class="mt-2 grid grid-cols-2 gap-3 border-t border-line pt-3">
+          <a
+            routerLink="/login"
+            (click)="closeMenu()"
+            class="button-secondary"
+          >
+            Se connecter
+          </a>
+
+          <a
+            routerLink="/register"
+            (click)="closeMenu()"
+            class="button-primary"
+          >
+            S’inscrire
+          </a>
         </div>
       }
-    </div>
+    </nav>
   }
 </header>

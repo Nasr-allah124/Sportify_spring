@@ -1,0 +1,111 @@
+<main class="page-container py-10">
+  <header class="flex flex-wrap items-end justify-between gap-4">
+    <h1 class="font-display text-4xl font-semibold">Administration Sportify</h1>
+
+    <button type="button" class="button-secondary"
+            [disabled]="loading()" (click)="load()">
+      {{ loading() ? 'Chargement…' : 'Actualiser' }}
+    </button>
+  </header>
+
+  @if (error()) {
+    <p role="alert" class="mt-6 rounded-xl bg-error-soft p-4 text-error">
+      {{ error() }}
+    </p>
+  }
+
+  @if (data(); as dashboard) {
+    <section aria-label="Vue d’ensemble"
+             class="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      @for (card of cards(); track card.label) {
+        <article class="rounded-2xl border border-line bg-surface p-5">
+          <h2 class="text-sm font-medium text-muted">{{ card.label }}</h2>
+          <p class="mt-2 font-display text-4xl font-semibold">{{ card.value }}</p>
+        </article>
+      }
+
+      <a routerLink="/admin/demandes-proprietaire"
+         class="flex flex-col justify-between rounded-2xl bg-[#c4ef69] p-5
+                text-[#102319] hover:underline">
+        <span class="text-sm font-semibold">Demandes en attente</span>
+        <strong class="mt-2 text-4xl">{{ dashboard.totals.pending }}</strong>
+        <span class="mt-3 text-sm">Consulter les dossiers ↗</span>
+      </a>
+    </section>
+
+    <section class="mt-8 rounded-3xl border border-line bg-surface p-5 sm:p-7">
+      <h2 class="font-display text-2xl font-semibold">Activité des propriétaires</h2>
+
+      @if (dashboard.owners.length) {
+        <div class="mt-5 overflow-x-auto">
+          <table class="w-full text-left text-sm">
+            <thead class="text-muted">
+            <tr>
+              <th class="p-3">Propriétaire</th>
+              <th class="p-3">Complexes</th>
+              <th class="p-3">Terrains</th>
+              <th class="p-3">Complexes par sport</th>
+              <th class="p-3">Réservations confirmées</th>
+              <th class="p-3">Annulées</th>
+            </tr>
+            </thead>
+            <tbody>
+              @for (owner of dashboard.owners; track owner.id) {
+                <tr class="border-t border-line">
+                  <th scope="row" class="p-3">{{ owner.name }}</th>
+                  <td class="p-3">{{ owner.complexes }}</td>
+                  <td class="p-3">{{ owner.fields }}</td>
+                  <td class="p-3">{{ owner.complexesBySport || 'Aucun terrain' }}</td>
+                  <td class="p-3">{{ owner.confirmed }}</td>
+                  <td class="p-3">{{ owner.cancelled }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <p class="mt-4 text-muted">Aucun compte propriétaire pour le moment.</p>
+      }
+    </section>
+
+    <section class="mt-8 rounded-3xl border border-line bg-surface p-5 sm:p-7">
+      <div class="flex flex-wrap items-end justify-between gap-4">
+        <h2 class="font-display text-2xl font-semibold">Utilisateurs</h2>
+
+        <label class="grid gap-1 text-sm">
+          Rechercher un compte
+          <input #query type="search" placeholder="Nom, email ou rôle"
+                 (input)="search.set(query.value)"
+                 class="rounded-xl border border-line bg-page px-4 py-2" />
+        </label>
+      </div>
+
+      <div class="mt-5 overflow-x-auto">
+        <table class="w-full text-left text-sm">
+          <thead class="text-muted">
+          <tr>
+            <th class="p-3">Nom</th>
+            <th class="p-3">Email</th>
+            <th class="p-3">Rôle</th>
+            <th class="p-3">Réservations effectuées</th>
+          </tr>
+          </thead>
+          <tbody>
+            @for (account of accounts(); track account.id) {
+              <tr class="border-t border-line">
+                <th scope="row" class="p-3">{{ account.name }}</th>
+                <td class="p-3">{{ account.email }}</td>
+                <td class="p-3">{{ account.role }}</td>
+                <td class="p-3">{{ account.bookings }}</td>
+              </tr>
+            } @empty {
+              <tr><td colspan="4" class="p-3 text-muted">Aucun compte trouvé.</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  } @else if (loading()) {
+    <p role="status" class="mt-8 text-muted">Chargement du tableau de bord…</p>
+  }
+</main>

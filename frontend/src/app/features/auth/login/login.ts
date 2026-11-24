@@ -12,6 +12,7 @@ import { finalize } from 'rxjs';
 import { AuthApi } from '../../../core/services/auth-api';
 import { AuthSession } from '../../../core/services/auth-session';
 import { GoogleAuthButton } from '../../../shared/google-auth-button/google-auth-button';
+import { homeForRole } from '../../../core/services/admin-guard';
 
 @Component({
   selector: 'app-login',
@@ -26,6 +27,32 @@ export class Login {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly destroyRef = inject(DestroyRef);
+  private openAccountHome(): void {
+    const token = this.session.token();
+
+    if (!token) {
+      this.session.expire();
+      return;
+    }
+
+    this.api.getMyProfile(token).pipe(
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: profile => {
+        void this.router.navigateByUrl(homeForRole(profile.role), {
+          replaceUrl: true
+        });
+      },
+      error: (err: HttpErrorResponse) => {
+        if (err.status === 401) {
+          this.session.expire();
+          return;
+        }
+
+        this.error.set('Impossible de charger votre espace. Réessayez.');
+      }
+    });
+  }
 
   readonly busy = signal(false);
   readonly error = signal('');
@@ -61,7 +88,7 @@ export class Login {
       next: response => {
         this.session.start(response);
         this.form.controls.password.reset();
-        void this.router.navigateByUrl('/profil', { replaceUrl: true });
+        this.openAccountHome();
       },
       error: (err: HttpErrorResponse) => {
         const body = err.error;

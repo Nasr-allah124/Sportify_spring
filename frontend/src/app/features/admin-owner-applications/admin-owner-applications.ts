@@ -71,6 +71,84 @@ export class AdminOwnerApplications implements OnInit {
       }
     });
   }
+  readonly reviewingId = signal<number | null>(null);
+  readonly rejectingId = signal<number | null>(null);
+  readonly reason = signal('');
+  readonly reviewError = signal('');
+  readonly reviewMessage = signal('');
+
+  startRejection(id: number): void {
+    this.rejectingId.set(id);
+    this.reason.set('');
+    this.reviewError.set('');
+    this.reviewMessage.set('');
+  }
+
+  cancelRejection(): void {
+    this.rejectingId.set(null);
+    this.reason.set('');
+    this.reviewError.set('');
+  }
+
+  decide(id: number, decision: 'APPROVED' | 'REJECTED'): void {
+    if (this.reviewingId() !== null) return;
+
+    const token = this.session.token();
+    if (!token) {
+      this.session.expire();
+      return;
+    }
+
+    this.reviewError.set('');
+    this.reviewMessage.set('');
+
+    const reason = decision === 'REJECTED' ? this.reason().trim() : null;
+
+    if (decision === 'REJECTED' && !reason) {
+      this.reviewError.set('Indiquez le motif du refus.');
+      return;
+    }
+
+    this.reviewingId.set(id);
+
+    this.api.review(id, decision, reason, token).pipe(
+      takeUntilDestroyed(this.destroyRef),
+      finalize(() => this.reviewingId.set(null))
+    ).subscribe({
+      next: () => {
+        this.applications.update(items => items.filter(item => item.id !== id));
+        this.cancelRejection();
+        this.reviewMessage.set(
+          decision === 'APPROVED'
+            ? `Demande #${id} acceptée. Le client est maintenant propriétaire.`
+            : `Demande #${id} refusée. Le motif est disponible dans l’espace du client.`
+        );
+      },
+      error: (err: HttpErrorResponse) => {
+        if (err.status === 401) {
+          this.session.expire();
+          return;
+        }
+
+        if (err.status === 409) {
+          this.cancelRejection();
+          this.reviewError.set(
+            'La demande ou le compte a changé. La liste a été actualisée.'
+          );
+          this.loadApplications();
+          return;
+        }
+
+        this.reviewError.set(
+          err.status === 403
+            ? 'Le serveur a refusé cette décision. Vérifiez votre accès administrateur.'
+            : err.status === 400
+              ? 'Vérifiez la décision et le motif du refus.'
+              : 'Impossible de confirmer la décision. Rechargez la liste avant de réessayer.'
+        );
+      }
+    });
+  }
 
   formatDate(value: string): string {
     return new Intl.DateTimeFormat('fr-FR', {

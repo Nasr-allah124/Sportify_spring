@@ -45,6 +45,7 @@ public class SecurityConfig {
                                                                 HttpMethod.GET,
                                                                 "/api/v1/complexes",
                                                                 "/api/v1/fields",
+                                                                "/api/v1/complexes/{id}/photos/{position}",
                                                                 "/api/v1/fields/{id}")
                                                 .permitAll().requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                                                 .anyRequest().authenticated())

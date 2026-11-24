@@ -32,9 +32,14 @@ public class CatalogController {
 
     @GetMapping("/fields")
     public List<FieldResponse> listFields(
+            @RequestParam(name = "q", required = false) String query,
             @RequestParam(name = "city", defaultValue = "") String city,
             @RequestParam(name = "sport", required = false) Field.SportType sport
     ) {
+        if (query != null) {
+            return catalogService.searchFields(query);
+        }
+
         return catalogService.listFields(city, sport);
     }
 
